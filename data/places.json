@@ -1,0 +1,254 @@
+{
+  "store_1": {
+    "label": "Little Seoul 24/7",
+    "coords": {
+      "x": -709.74,
+      "y": -904.15,
+      "z": 19.21
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_2": {
+    "label": "Strawberry 24/7",
+    "coords": {
+      "x": 31.19,
+      "y": -1339.27,
+      "z": 29.5
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_3": {
+    "label": "Davis LTD",
+    "coords": {
+      "x": -43.43,
+      "y": -1748.3,
+      "z": 29.42
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_4": {
+    "label": "Mirror Park LTD",
+    "coords": {
+      "x": 1159.46,
+      "y": -314.05,
+      "z": 69.2
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_5": {
+    "label": "Vinewood 24/7",
+    "coords": {
+      "x": 378.11,
+      "y": 333.36,
+      "z": 103.57
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_6": {
+    "label": "Richman Glen LTD",
+    "coords": {
+      "x": -1829.27,
+      "y": 798.76,
+      "z": 138.19
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_7": {
+    "label": "Palomino 24/7",
+    "coords": {
+      "x": 2549.33,
+      "y": 384.88,
+      "z": 108.62
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_8": {
+    "label": "Senora 24/7",
+    "coords": {
+      "x": 2672.69,
+      "y": 3286.63,
+      "z": 55.24
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_9": {
+    "label": "Sandy Shores 24/7",
+    "coords": {
+      "x": 1959.21,
+      "y": 3748.83,
+      "z": 32.34
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_10": {
+    "label": "Harmony 24/7",
+    "coords": {
+      "x": 546.56,
+      "y": 2662.8,
+      "z": 42.16
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_11": {
+    "label": "Mount Chiliad 24/7",
+    "coords": {
+      "x": 1734.74,
+      "y": 6420.83,
+      "z": 35.04
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_12": {
+    "label": "Grapeseed LTD",
+    "coords": {
+      "x": 1707.9,
+      "y": 4920.49,
+      "z": 42.06
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_13": {
+    "label": "Chumash 24/7",
+    "coords": {
+      "x": -3250.09,
+      "y": 1004.46,
+      "z": 12.83
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "store_14": {
+    "label": "Banham Canyon 24/7",
+    "coords": {
+      "x": -3047.88,
+      "y": 585.64,
+      "z": 7.91
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false
+  },
+  "bank_1": {
+    "label": "Legion Square Fleeca",
+    "coords": {
+      "x": 146.92,
+      "y": -1046.11,
+      "z": 29.36
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "bank_2": {
+    "label": "Hawick Fleeca",
+    "coords": {
+      "x": 311.15,
+      "y": -284.49,
+      "z": 54.16
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "bank_3": {
+    "label": "Burton Fleeca",
+    "coords": {
+      "x": -353.82,
+      "y": -55.37,
+      "z": 49.03
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "bank_4": {
+    "label": "Del Perro Fleeca",
+    "coords": {
+      "x": -1210.77,
+      "y": -336.57,
+      "z": 37.78
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "bank_5": {
+    "label": "Great Ocean Fleeca",
+    "coords": {
+      "x": -2956.55,
+      "y": 481.74,
+      "z": 15.69
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "bank_6": {
+    "label": "Route 68 Fleeca",
+    "coords": {
+      "x": 1175.96,
+      "y": 2712.87,
+      "z": 38.09
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false
+  },
+  "vangelico": {
+    "label": "Vangelico Jewelry",
+    "coords": {
+      "x": -622.2,
+      "y": -230.8,
+      "z": 38.05
+    },
+    "minPolice": 2,
+    "cooldown": 45,
+    "alertChance": 100,
+    "blip": false
+  }
+}

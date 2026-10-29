@@ -1,0 +1,161 @@
+import type { PanelSchema } from "@aicore-fivem/shared";
+
+/** ai-robberies' panel: places (store, bank, jewelery), what can be robbed there, and who counts as police. */
+export const robberiesSchema: PanelSchema = {
+  title: "ADMIN_TITLE",
+  icon: "mask",
+  files: {
+    settings: {
+      kind: "settings",
+      sync: "admin",
+      sections: {
+        policeJobs: { type: "names", max: 10, itemMax: 32, pattern: "^[a-z0-9_]{2,32}$" },
+        account: { type: "text", min: 2, max: 32 },
+      },
+    },
+    places: {
+      kind: "records",
+      sync: "all",
+      labelPath: "label",
+      newRecord: { label: "", coords: { x: 0, y: 0, z: 0 }, minPolice: 0, cooldown: 30, alertChance: 100, blip: false },
+      sections: {
+        label: { type: "text", min: 1, max: 48 },
+        coords: { type: "vec3" },
+        minPolice: { type: "number", min: 0, max: 32, integer: true },
+        cooldown: { type: "number", min: 1, max: 1440, integer: true },
+        alertChance: { type: "number", min: 0, max: 100, integer: true },
+        blip: { type: "bool" },
+      },
+    },
+    targets: {
+      kind: "records",
+      sync: "all",
+      keyPattern: "^[a-z0-9_]{2,64}$",
+      labelPath: "label",
+      newRecord: { place: "", label: "", kind: "register", coords: { x: 0, y: 0, z: 0 }, item: "", consume: false, seconds: 20, cashMin: 0, cashMax: 0, reward: "", rewardMin: 0, rewardMax: 0, door: "", vaultModel: "", vaultClosed: 0, vaultOpen: 0 },
+      sections: {
+        place: { type: "text", min: 1, max: 48 },
+        label: { type: "text", min: 1, max: 48 },
+        kind: { type: "enum", values: ["register", "safe", "locker", "vitrine", "door"] },
+        coords: { type: "vec3" },
+        item: { type: "text", min: 0, max: 48 },
+        consume: { type: "bool" },
+        seconds: { type: "number", min: 1, max: 600, integer: true },
+        cashMin: { type: "number", min: 0, max: 1_000_000, integer: true },
+        cashMax: { type: "number", min: 0, max: 1_000_000, integer: true },
+        reward: { type: "text", min: 0, max: 48 },
+        rewardMin: { type: "number", min: 0, max: 100, integer: true },
+        rewardMax: { type: "number", min: 0, max: 100, integer: true },
+        door: { type: "text", min: 0, max: 64 },
+        vaultModel: { type: "text", min: 0, max: 64 },
+        vaultClosed: { type: "number", min: -720, max: 720 },
+        vaultOpen: { type: "number", min: -720, max: 720 },
+      },
+    },
+  },
+  tabs: [
+    {
+      id: "places",
+      file: "places",
+      icon: "store",
+      label: "ADMIN_TAB_PLACES",
+      desc: "ADMIN_TAB_PLACES_DESC",
+      createLabel: "ADMIN_NEW_PLACE",
+      deleteLabel: "ADMIN_DELETE_PLACE",
+      cards: [
+        {
+          icon: "store",
+          title: "ADMIN_C_PLACE",
+          desc: "ADMIN_C_PLACE_DESC",
+          fields: [
+            { widget: "text", path: "label", label: "ADMIN_F_LABEL", placeholder: "ADMIN_P_LABEL" },
+            { widget: "point", path: "coords", label: "ADMIN_F_COORDS", hint: "ADMIN_H_COORDS", ground: true },
+            { widget: "number", path: "minPolice", label: "ADMIN_F_MIN_POLICE", hint: "ADMIN_H_MIN_POLICE", min: 0, max: 32 },
+            { widget: "number", path: "cooldown", label: "ADMIN_F_COOLDOWN", hint: "ADMIN_H_COOLDOWN", min: 1, max: 1440, unit: "min" },
+            { widget: "number", path: "alertChance", label: "ADMIN_F_ALERT", hint: "ADMIN_H_ALERT", min: 0, max: 100, unit: "%" },
+            { widget: "switch", path: "blip", label: "ADMIN_F_BLIP" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "targets",
+      file: "targets",
+      icon: "box-open",
+      label: "ADMIN_TAB_TARGETS",
+      desc: "ADMIN_TAB_TARGETS_DESC",
+      listSub: "place",
+      createLabel: "ADMIN_NEW_TARGET",
+      deleteLabel: "ADMIN_DELETE_TARGET",
+      cards: [
+        {
+          icon: "box-open",
+          title: "ADMIN_C_TARGET",
+          desc: "ADMIN_C_TARGET_DESC",
+          fields: [
+            { widget: "text", path: "place", label: "ADMIN_F_PLACE", hint: "ADMIN_H_PLACE", placeholder: "ADMIN_P_PLACE" },
+            { widget: "text", path: "label", label: "ADMIN_F_TARGET_LABEL", placeholder: "ADMIN_P_TARGET_LABEL" },
+            {
+              widget: "select",
+              path: "kind",
+              label: "ADMIN_F_KIND",
+              hint: "ADMIN_H_KIND",
+              options: [
+                { value: "register", label: "ADMIN_O_REGISTER" },
+                { value: "safe", label: "ADMIN_O_SAFE" },
+                { value: "locker", label: "ADMIN_O_LOCKER" },
+                { value: "vitrine", label: "ADMIN_O_VITRINE" },
+                { value: "door", label: "ADMIN_O_DOOR" },
+              ],
+            },
+            { widget: "point", path: "coords", label: "ADMIN_F_TARGET_COORDS", hint: "ADMIN_H_TARGET_COORDS", ground: true },
+            { widget: "number", path: "seconds", label: "ADMIN_F_SECONDS", min: 1, max: 600, unit: "s" },
+            { widget: "text", path: "item", label: "ADMIN_F_ITEM", hint: "ADMIN_H_ITEM", placeholder: "ADMIN_P_ITEM" },
+            { widget: "switch", path: "consume", label: "ADMIN_F_CONSUME" },
+          ],
+        },
+        {
+          icon: "lock",
+          title: "ADMIN_C_DOOR",
+          desc: "ADMIN_C_DOOR_DESC",
+          fields: [
+            { widget: "text", path: "door", label: "ADMIN_F_DOOR", hint: "ADMIN_H_DOOR", placeholder: "ADMIN_P_DOOR" },
+            { widget: "text", path: "vaultModel", label: "ADMIN_F_VAULT_MODEL", hint: "ADMIN_H_VAULT_MODEL", placeholder: "ADMIN_P_VAULT_MODEL" },
+            { widget: "number", path: "vaultClosed", label: "ADMIN_F_VAULT_CLOSED", min: -720, max: 720, step: 0.5, unit: "°" },
+            { widget: "number", path: "vaultOpen", label: "ADMIN_F_VAULT_OPEN", min: -720, max: 720, step: 0.5, unit: "°" },
+          ],
+        },
+        {
+          icon: "money-bill-wave",
+          title: "ADMIN_C_REWARD",
+          desc: "ADMIN_C_REWARD_DESC",
+          fields: [
+            { widget: "number", path: "cashMin", label: "ADMIN_F_CASH_MIN", min: 0, max: 1_000_000, unit: "$" },
+            { widget: "number", path: "cashMax", label: "ADMIN_F_CASH_MAX", min: 0, max: 1_000_000, unit: "$" },
+            { widget: "text", path: "reward", label: "ADMIN_F_REWARD", hint: "ADMIN_H_REWARD", placeholder: "ADMIN_P_REWARD" },
+            { widget: "number", path: "rewardMin", label: "ADMIN_F_REWARD_MIN", min: 0, max: 100 },
+            { widget: "number", path: "rewardMax", label: "ADMIN_F_REWARD_MAX", min: 0, max: 100 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "settings",
+      file: "settings",
+      icon: "sliders",
+      label: "ADMIN_TAB_SETTINGS",
+      desc: "ADMIN_TAB_SETTINGS_DESC",
+      cards: [
+        {
+          icon: "sliders",
+          title: "ADMIN_C_SETTINGS",
+          desc: "ADMIN_C_SETTINGS_DESC",
+          fields: [
+            { widget: "tags", path: "policeJobs", label: "ADMIN_F_POLICE_JOBS", hint: "ADMIN_H_POLICE_JOBS", placeholder: "ADMIN_P_POLICE_JOBS" },
+            { widget: "text", path: "account", label: "ADMIN_F_ACCOUNT", hint: "ADMIN_H_ACCOUNT", placeholder: "ADMIN_P_ACCOUNT" },
+          ],
+        },
+      ],
+    },
+  ],
+};

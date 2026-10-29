@@ -1,0 +1,23 @@
+name 'ai-robberies'
+author 'ai-core'
+version '0.1.0'
+license 'GPL-3.0-only'
+description 'Robberies: store registers and safes, bank vaults and lockers, jewelery vitrines'
+fx_version 'cerulean'
+game 'gta5'
+node_version '22'
+
+client_script 'dist/client.js'
+server_script 'dist/server.js'
+
+
+dependencies {
+	'/onesync',
+	'ai-core',
+}
+
+files {
+	'locales/*.json',
+	'data/places.json',
+	'data/targets.json',
+}
