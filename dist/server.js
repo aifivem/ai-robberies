@@ -327,7 +327,7 @@ function toPatch(value) {
 		default: return null;
 	}
 }
-const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(value)), core$8 = resourceExport(CORE.resource), ERR = {
+const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(value)), core$9 = resourceExport(CORE.resource), ERR = {
 	type: "ADMIN_ERR_TYPE",
 	range: "ADMIN_ERR_RANGE",
 	length: "ADMIN_ERR_LENGTH",
@@ -341,7 +341,7 @@ const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(va
 		if (cached && Date.now() - cached.at < 2e3) return cached.values.size > 0 ? cached.values : null;
 		let list = [];
 		try {
-			list = core$8.GetLookupValues(source);
+			list = core$9.GetLookupValues(source);
 		} catch {}
 		let values = new Set(Array.isArray(list) ? list.filter((v) => typeof v == "string") : []);
 		return this.lists.set(source, {
@@ -543,7 +543,7 @@ function writeSchema(resource, name, text, log) {
 	(0, node_fs_promises.mkdir)(dir, { recursive: !0 }).then(() => (0, node_fs_promises.writeFile)(`${dir}/${name}.schema.json`, text, "utf8")).catch((error) => log.error(`writing ${resource}/${path} failed`, error));
 }
 // ../../../packages/lib/src/server/admin/panel.ts
-const core$7 = resourceExport(CORE.resource), DEFAULT_KEY = "^[a-z0-9_]{2,32}$";
+const core$8 = resourceExport(CORE.resource), DEFAULT_KEY = "^[a-z0-9_]{2,32}$";
 function imported(spec, value) {
 	let base = clone(spec.newRecord ?? {}), out = {};
 	for (let name of Object.keys(spec.sections)) {
@@ -564,7 +564,7 @@ var AdminPanel = class {
 	constructor(schema) {
 		this.schema = schema;
 		for (let [name, spec] of Object.entries(schema.files)) this.load(name, spec);
-		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges)), setImmediate(() => core$7.RegisterAdminPanel(this.resource));
+		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges)), setImmediate(() => core$8.RegisterAdminPanel(this.resource));
 	}
 	get(file) {
 		return this.data.get(file) ?? {};
@@ -657,7 +657,7 @@ var AdminPanel = class {
 		let spec = this.schema.files[file], data = this.get(file), value = key === void 0 ? data : data[key] ?? null;
 		this.dataFiles.get(file)?.write(data);
 		for (let handler of this.handlers.get(file) ?? []) handler(key, value);
-		if (core$7.AdminPanelChanged({
+		if (core$8.AdminPanelChanged({
 			resource: this.resource,
 			file,
 			key,
@@ -695,19 +695,19 @@ function notify(source, text, kind = "info", duration) {
 	emitNet(CORE.clientNotifyEvent, source, notification);
 }
 // ../../../packages/lib/src/server/inventory.ts
-const core$6 = resourceExport(CORE.resource), inventory = {
-	addItem: (inv, item, count = 1, metadata, slot) => core$6.AddItem(inv, item, count, metadata, slot),
-	removeItem: (inv, item, count = 1, metadata, slot) => core$6.RemoveItem(inv, item, count, metadata, slot),
-	getItemCount: (inv, item, metadata) => core$6.GetItemCount(inv, item, metadata),
-	hasItem: (inv, item, count = 1) => core$6.HasItem(inv, item, count),
-	canCarryItem: (inv, item, count = 1, metadata) => core$6.CanCarryItem(inv, item, count, metadata),
-	getItems: (inv) => core$6.GetItems(inv),
-	clearInventory: (inv) => core$6.ClearInventory(inv),
-	registerStash: (name, label, slots, maxWeight, jobs = []) => core$6.RegisterStash(name, label, slots, maxWeight, jobs),
-	openInventory: (source, inv) => core$6.OpenInventory(source, inv),
-	registerUsableItem: (name, handler) => core$6.RegisterUsableItem(name, handler),
-	getItemDefinition: (name) => core$6.GetItemDefinition(name)
-}, core$5 = resourceExport(CORE.resource);
+const core$7 = resourceExport(CORE.resource), inventory = {
+	addItem: (inv, item, count = 1, metadata, slot) => core$7.AddItem(inv, item, count, metadata, slot),
+	removeItem: (inv, item, count = 1, metadata, slot) => core$7.RemoveItem(inv, item, count, metadata, slot),
+	getItemCount: (inv, item, metadata) => core$7.GetItemCount(inv, item, metadata),
+	hasItem: (inv, item, count = 1) => core$7.HasItem(inv, item, count),
+	canCarryItem: (inv, item, count = 1, metadata) => core$7.CanCarryItem(inv, item, count, metadata),
+	getItems: (inv) => core$7.GetItems(inv),
+	clearInventory: (inv) => core$7.ClearInventory(inv),
+	registerStash: (name, label, slots, maxWeight, jobs = []) => core$7.RegisterStash(name, label, slots, maxWeight, jobs),
+	openInventory: (source, inv) => core$7.OpenInventory(source, inv),
+	registerUsableItem: (name, handler) => core$7.RegisterUsableItem(name, handler),
+	getItemDefinition: (name) => core$7.GetItemDefinition(name)
+}, core$6 = resourceExport(CORE.resource);
 var OnlinePlayers = class {
 	players = new Map();
 	onDuty = new Map();
@@ -716,7 +716,7 @@ var OnlinePlayers = class {
 		if (this.started) return;
 		this.started = !0;
 		let load = (source, character) => {
-			this.put(source, character, (core$5.GetJobs(source) ?? []).map((m) => m.job), (core$5.GetGangs(source) ?? []).map((m) => m.gang)), this.setDuty(source, core$5.GetDutyJob(source));
+			this.put(source, character, (core$6.GetJobs(source) ?? []).map((m) => m.job), (core$6.GetGangs(source) ?? []).map((m) => m.gang)), this.setDuty(source, core$6.GetDutyJob(source));
 		};
 		on(CORE.playerLoadedEvent, load), on(CORE.playerUnloadedEvent, (source) => this.drop(source)), on(CORE.jobsChangedEvent, (source, jobs) => {
 			let player = this.players.get(source);
@@ -725,8 +725,8 @@ var OnlinePlayers = class {
 			let player = this.players.get(source);
 			player && (player.gangs = gangs.map((m) => m.gang));
 		}), on(CORE.dutyChangedEvent, (source, job) => this.setDuty(source, job));
-		for (let source of core$5.GetLoadedSources()) {
-			let character = core$5.GetCharacter(source);
+		for (let source of core$6.GetLoadedSources()) {
+			let character = core$6.GetCharacter(source);
 			character && load(source, character);
 		}
 	}
@@ -772,10 +772,10 @@ var OnlinePlayers = class {
 const EMPTY = new Set();
 new OnlinePlayers();
 // ../../../packages/lib/src/server/vehicleKeys.ts
-const core$4 = resourceExport(CORE.resource), vehicleKeys = {
-	give: (source, vehicle, purpose = "temporary") => core$4.GiveVehicleKeys(source, vehicle, purpose),
-	remove: (source, vehicle) => core$4.RemoveVehicleKeys(source, vehicle),
-	has: (source, vehicle) => core$4.HasVehicleKeys(source, vehicle)
+const core$5 = resourceExport(CORE.resource), vehicleKeys = {
+	give: (source, vehicle, purpose = "temporary") => core$5.GiveVehicleKeys(source, vehicle, purpose),
+	remove: (source, vehicle) => core$5.RemoveVehicleKeys(source, vehicle),
+	has: (source, vehicle) => core$5.HasVehicleKeys(source, vehicle)
 }, TYPES = new Set([
 	"automobile",
 	"bike",
@@ -826,7 +826,7 @@ async function spawnVehicle(options) {
 	return await Promise.all(riders.map((r) => seatPlayer(vehicle, r.source, r.seat))), vehicle;
 }
 // ../../../packages/lib/src/server/proximity.ts
-const core$3 = resourceExport(CORE.resource), posOf = (source) => {
+const core$4 = resourceExport(CORE.resource), posOf = (source) => {
 	let [x = 0, y = 0, z = 0] = GetEntityCoords(GetPlayerPed(String(source)));
 	return {
 		x,
@@ -851,7 +851,7 @@ function playersNearEntity(entity, radius) {
 		x,
 		y,
 		z
-	}, radius, [owner, ...core$3.GetPlayersInScope(owner)]);
+	}, radius, [owner, ...core$4.GetPlayersInScope(owner)]);
 }
 // ../../../packages/lib/src/server/command.ts
 const resource = GetCurrentResourceName();
@@ -938,8 +938,8 @@ var GlobalGroup$1 = class extends Mirror {
 	}
 };
 resourceExport(CORE.resource), resourceExport(CORE.resource);
-// resource/common/locale.ts
-const Locale = createLocale(), ResourceName = GetCurrentResourceName();
+// ../../../packages/lib/src/server/dispatch.ts
+const core$1 = resourceExport(CORE.resource), dispatch = { alert: (alert) => core$1.SendDispatchAlert(alert) }, Locale = createLocale(), ResourceName = GetCurrentResourceName();
 IsDuplicityVersion();
 // resource/common/robbery.ts
 const EVENTS = {
@@ -1818,7 +1818,18 @@ onClientCallback(EVENTS.truckStart, async (source) => {
 	if (!truck.take(source, token, "plant", 5) || truck.isOpen) return fail("ROB_ERR_FAR");
 	if (!inventory.removeItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
 	let p = pos(source);
-	return optionalExport("ai-police")?.SendAlert(p.x, p.y, p.z, Locale("ROB_TRUCK_ALERT")), notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS), truck.blow(), { ok: !0 };
+	return dispatch.alert({
+		code: "10-90",
+		title: Locale("ROB_TRUCK_ALERT"),
+		coords: p,
+		source,
+		icon: "truck",
+		blip: {
+			sprite: 67,
+			color: 1
+		},
+		priority: "high"
+	}), notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS), truck.blow(), { ok: !0 };
 }), onClientCallback(EVENTS.truckLoot, (source) => !truck.atRear(source) || !truck.isOpen ? fail("ROB_ERR_FAR") : truck.isLooted ? fail("ROB_ERR_EMPTY") : {
 	ok: !0,
 	token: truck.start(source, "loot"),
@@ -1880,7 +1891,15 @@ onClientCallback(EVENTS.start, {
 	return !target || !place || !near(source, target.coords, 2.5) || place.interior && target.kind !== "entry" && houses.insideOf(source) !== place.id ? fail("ROB_ERR_FAR") : target.kind === "entry" && robbed.get(id) === !0 ? (houses.enter(source, place), {
 		ok: !0,
 		entered: !0
-	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && Math.random() * 100 < place.alertChance && optionalExport("ai-police")?.SendAlert(place.coords.x, place.coords.y, place.coords.z, Locale("ROB_ALERT", place.label)), {
+	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && Math.random() * 100 < place.alertChance && dispatch.alert({
+		code: "10-90",
+		title: Locale("ROB_ALERT"),
+		message: place.label,
+		coords: place.coords,
+		source,
+		icon: "sack-dollar",
+		priority: "high"
+	}), {
 		ok: !0,
 		token: robberies.start(source, target),
 		seconds: target.seconds

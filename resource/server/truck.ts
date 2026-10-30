@@ -1,9 +1,9 @@
 import {
   aiLog,
+  dispatch,
   inventory,
   notify,
   onClientCallback,
-  optionalExport,
   playersNearEntity,
   spawnVehicle,
 } from "@aicore-fivem/lib/server";
@@ -268,12 +268,15 @@ onClientCallback(
     if (!inventory.removeItem(source, content.settings.truck.item, 1))
       return fail("ROB_ERR_ITEM");
     const p = pos(source);
-    optionalExport("ai-police")?.SendAlert(
-      p.x,
-      p.y,
-      p.z,
-      Locale("ROB_TRUCK_ALERT"),
-    );
+    dispatch.alert({
+      code: "10-90",
+      title: Locale("ROB_TRUCK_ALERT"),
+      coords: p,
+      source,
+      icon: "truck",
+      blip: { sprite: 67, color: 1 },
+      priority: "high",
+    });
     notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS);
     truck.blow();
     return { ok: true };

@@ -1,5 +1,5 @@
 name 'ai-robberies'
-author 'ai-core'
+author 'TGIANN'
 version '0.1.0'
 license 'GPL-3.0-only'
 description 'Robberies: store registers and safes, bank vaults and lockers, jewelery vitrines'

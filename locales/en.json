@@ -4,7 +4,7 @@
   "ROB_WORKING": "Robbing",
   "ROB_CASH": "You took ${0}",
   "ROB_NO_ROOM": "No room for the loot in your inventory",
-  "ROB_ALERT": "Robbery in progress: {0}",
+  "ROB_ALERT": "Robbery in progress",
   "ROB_ERR_FAR": "You are not close enough",
   "ROB_ERR_EMPTY": "Already emptied, come back later",
   "ROB_ERR_BUSY": "Someone is already on it",

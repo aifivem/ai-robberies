@@ -5,7 +5,7 @@
   "description": "Robberies: store registers and safes, bank vaults and lockers, jewelery vitrines",
   "license": "GPL-3.0-only",
   "author": {
-    "name": "ai-core"
+    "name": "TGIANN"
   },
   "repository": "github:TGIANN/ai-robberies",
   "type": "module",

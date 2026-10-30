@@ -1,6 +1,7 @@
 import {
   aiLog,
   aiLogChannels,
+  dispatch,
   GlobalGroup,
   inventory,
   notify,
@@ -114,12 +115,15 @@ onClientCallback(
       robberies.shouldAlert(place.id, place.cooldown) &&
       Math.random() * 100 < place.alertChance
     )
-      optionalExport("ai-police")?.SendAlert(
-        place.coords.x,
-        place.coords.y,
-        place.coords.z,
-        Locale("ROB_ALERT", place.label),
-      );
+      dispatch.alert({
+        code: "10-90",
+        title: Locale("ROB_ALERT"),
+        message: place.label,
+        coords: place.coords,
+        source,
+        icon: "sack-dollar",
+        priority: "high",
+      });
     const token = robberies.start(source, target);
     return { ok: true, token, seconds: target.seconds };
   },
