@@ -18,4 +18,4 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 
 ## Entry points
 
-- Checks and rewards `resource/server/index.ts`, panel `resource/server/schema.ts`; prompts `resource/client/index.ts`, vault doors `resource/client/vaults.ts`.
+- Checks and rewards `resource/server/index.ts`, houses `resource/server/houses.ts`, armored truck `resource/server/truck.ts`, panel `resource/server/schema.ts`; prompts `resource/client/index.ts`, vault doors `resource/client/vaults.ts`, truck job `resource/client/truck.ts`.
