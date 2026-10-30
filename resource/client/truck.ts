@@ -1,49 +1,40 @@
-import { hidePrompt, notify, onPromptPressed, onServerEvent, progress, showPrompt, triggerServerCallback, Zones } from "@aicore-fivem/lib/client";
+import { createBlip, notify, onServerEvent, Points, progress, triggerServerCallback } from "@aicore-fivem/lib/client";
 import { record } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS } from "common/robbery";
 import { content, errorText, world } from "./content";
 
-const GIVER = "rob:truck:giver";
-const REAR = "rob:truck:rear";
-
 /**
- * The armored truck job on this client: the giver's prompt, a route blip to the truck the server spawned, and a
- * prompt at its rear doors (plant the charge, then grab the cash). The server checks every step.
+ * The armored truck job on this client: the giver's point, a route blip to the truck the server spawned, and a
+ * point at its rear doors (plant the charge, then grab the cash). The server checks every step.
  */
 class TruckJob {
-  private readonly giverZone = new Zones();
+  private readonly points = new Points();
   private blip = 0;
   private netId = 0;
   private open = false;
-  private rearZone = new Zones();
-  busy = false;
 
   rebuildGiver(): void {
-    this.giverZone.clear();
+    this.points.remove("giver");
     const { giver, price } = content.settings.truck;
     if (giver.x === 0 && giver.y === 0) return;
-    this.giverZone.add(GIVER, { shape: { type: "sphere", center: giver, radius: 1.5 }, interval: 500, onEnter: () => showPrompt(GIVER, Locale("ROB_PROMPT_TRUCK", price)), onExit: () => hidePrompt(GIVER) });
+    this.points.add("giver", { coords: giver, label: Locale("ROB_PROMPT_TRUCK", price), icon: "truck", radius: 1.5, onPressed: () => this.start() });
   }
 
   job(netId: number, rear: { x: number; y: number; z: number }): void {
     this.netId = netId;
     if (this.blip) RemoveBlip(this.blip);
-    this.blip = AddBlipForCoord(rear.x, rear.y, rear.z);
-    SetBlipSprite(this.blip, 67);
-    SetBlipColour(this.blip, 1);
+    this.blip = createBlip({ coords: rear, label: Locale("ROB_BLIP_TRUCK"), sprite: 67, color: 1, scale: 1, shortRange: false });
     SetBlipRoute(this.blip, true);
-    this.rearZone.clear();
-    this.rearZone.add(REAR, {
-      shape: { type: "sphere", center: rear, radius: 2 },
-      interval: 300,
-      onEnter: () => showPrompt(REAR, Locale(this.open ? "ROB_PROMPT_TRUCK_LOOT" : "ROB_PROMPT_TRUCK_PLANT")),
-      onExit: () => hidePrompt(REAR),
-    });
+    const at = { coords: rear, radius: 2, interval: 300, onPressed: () => this.rear() };
+    this.points.add("plant", { ...at, label: Locale("ROB_PROMPT_TRUCK_PLANT"), icon: "bomb", canShow: () => !this.open });
+    this.points.add("loot", { ...at, label: Locale("ROB_PROMPT_TRUCK_LOOT"), icon: "sack-dollar", canShow: () => this.open });
   }
 
   opened(netId: number): void {
-    if (netId === this.netId) this.open = true;
+    if (netId !== this.netId) return;
+    this.open = true;
+    this.points.refresh();
   }
 
   end(): void {
@@ -51,8 +42,8 @@ class TruckJob {
     this.blip = 0;
     this.netId = 0;
     this.open = false;
-    this.rearZone.clear();
-    hidePrompt(REAR);
+    this.points.remove("plant");
+    this.points.remove("loot");
   }
 
   async start(): Promise<void> {
@@ -88,9 +79,3 @@ onServerEvent(
 );
 onServerEvent(EVENTS.truckOpen, { args: ([netId]): [number] | null => (typeof netId === "number" ? [netId] : null) }, (netId) => truck.opened(netId));
 onServerEvent(EVENTS.truckEnd, () => truck.end());
-
-onPromptPressed((id) => {
-  if ((id !== GIVER && id !== REAR) || truck.busy) return;
-  truck.busy = true;
-  void (id === GIVER ? truck.start() : truck.rear()).finally(() => (truck.busy = false));
-});

@@ -9,7 +9,7 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 - A door target without an ai-doorlock id swings its vault map object on every client near it (`resource/client/vaults.ts`), driven by the same GlobalState key.
 - The police alert goes once per place per cooldown, on the first target of a visit.
 - Houses: routing bucket 7000 + n per house (`resource/server/houses.ts`); the house a character is in is ai-core metadata `robbery_house` and a rejoin puts them at the door. Targets of a house other than its entry only work and show for players inside it.
-- Armored truck (`resource/server/truck.ts`): server-created stockade and guard peds (orphan mode 2), guards get `TaskCombatPed` from the server once a player is within 40 m; the rear doors are `SetVehicleDoorBroken` on the server after the fuse.
+- Armored truck (`resource/server/truck.ts`): stockade from lib `spawnVehicle` (no keys) and server-created guard peds (orphan mode 2), guards get `TaskCombatPed` from the server once a player is within 40 m; the rear doors are `SetVehicleDoorBroken` on the server after the fuse.
 
 ## Contracts
 
@@ -18,4 +18,4 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 
 ## Entry points
 
-- Checks and rewards `resource/server/index.ts`, houses `resource/server/houses.ts`, armored truck `resource/server/truck.ts`, panel `resource/server/schema.ts`; prompts `resource/client/index.ts`, vault doors `resource/client/vaults.ts`, truck job `resource/client/truck.ts`.
+- Checks and rewards `resource/server/index.ts`, houses `resource/server/houses.ts`, armored truck `resource/server/truck.ts`, panel `resource/server/schema.ts`; interaction points (lib `Points`, a Rob and an Emptied point per target picked by its GlobalState key) `resource/client/index.ts`, vault doors `resource/client/vaults.ts`, truck job `resource/client/truck.ts`.

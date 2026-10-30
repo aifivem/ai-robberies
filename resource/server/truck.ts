@@ -1,4 +1,4 @@
-import { aiLog, inventory, notify, onClientCallback, optionalExport, playersNearEntity } from "@aicore-fivem/lib/server";
+import { aiLog, inventory, notify, onClientCallback, optionalExport, playersNearEntity, spawnVehicle } from "@aicore-fivem/lib/server";
 import { asArgs, waitFor } from "@aicore-fivem/lib/shared";
 import { Locale, ResourceName } from "common";
 import { EVENTS } from "common/robbery";
@@ -50,9 +50,8 @@ class Truck {
     const at = s.spawns[random(0, s.spawns.length - 1)];
     if (!at) return false;
     this.nextAllowed = Date.now() + s.cooldown * 60_000;
-    const vehicle = CreateVehicleServerSetter(GetHashKey(TRUCK_MODEL), "automobile", at.x, at.y, at.z, at.heading);
-    if (!(await waitFor(() => DoesEntityExist(vehicle) || undefined, 5000).catch(() => false))) return false;
-    SetEntityOrphanMode(vehicle, 2);
+    const vehicle = await spawnVehicle({ model: TRUCK_MODEL, type: "automobile", coords: at });
+    if (vehicle === null) return false;
     SetVehicleDoorsLocked(vehicle, 2);
     this.vehicle = vehicle;
     this.open = false;

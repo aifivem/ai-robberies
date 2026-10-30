@@ -1,4 +1,4 @@
-import { hidePrompt, notify, onPromptPressed, onServerEvent, progress, showPrompt, triggerServerCallback, Zones } from "@aicore-fivem/lib/client";
+import { Blips, fadeOut, notify, onServerEvent, Points, progress, triggerServerCallback } from "@aicore-fivem/lib/client";
 import { record, sleep } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { ANIMS, EVENTS, readPlaces, readTargets, robbedKey } from "common/robbery";
@@ -6,48 +6,30 @@ import { content, errorText, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
 
-const BLIP_TEXT = "AIROB_BLIP";
-AddTextEntry(BLIP_TEXT, "~a~");
-
 /**
- * A prompt at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. Targets inside a
- * house only exist while the player is inside it, together with its exit prompt.
+ * A point at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. Targets inside a
+ * house only exist while the player is inside it, together with its exit point.
  */
 class Spots {
-  private readonly zones = new Zones();
-  private blips: number[] = [];
-  busy = false;
+  readonly points = new Points();
+  private readonly blips = new Blips();
   insideId: string | null = null;
 
   rebuild(): void {
-    this.zones.clear();
-    for (const blip of this.blips) RemoveBlip(blip);
-    this.blips = [];
+    this.points.clear();
+    this.blips.clear();
     for (const target of content.targets.values()) {
       const id = target.id;
       const house = content.places.get(target.place)?.interior != null && target.kind !== "entry";
       if (house !== (this.insideId === target.place)) continue;
-      this.zones.add(id, {
-        shape: { type: "sphere", center: target.coords, radius: 1.2 },
-        interval: 300,
-        onEnter: () => showPrompt(id, GlobalState[robbedKey(id)] === true ? Locale("ROB_PROMPT_EMPTY", target.label) : Locale("ROB_PROMPT", target.label)),
-        onExit: () => hidePrompt(id),
-      });
+      const robbed = () => GlobalState[robbedKey(id)] === true;
+      const at = { coords: target.coords, radius: 1.2, interval: 300, onPressed: () => this.rob(id) };
+      this.points.add(id, { ...at, label: Locale("ROB_PROMPT", target.label), icon: "mask", canShow: () => !robbed() });
+      this.points.add(`${id}:empty`, { ...at, label: Locale("ROB_PROMPT_EMPTY", target.label), icon: "box-open", canShow: robbed });
     }
     const inside = this.insideId ? content.places.get(this.insideId)?.interior : null;
-    if (inside)
-      this.zones.add("rob:exit", { shape: { type: "sphere", center: inside, radius: 1.5 }, interval: 300, onEnter: () => showPrompt("rob:exit", Locale("ROB_PROMPT_EXIT")), onExit: () => hidePrompt("rob:exit") });
-    for (const place of content.places.values()) {
-      if (!place.blip) continue;
-      const blip = AddBlipForCoord(place.coords.x, place.coords.y, place.coords.z);
-      SetBlipSprite(blip, 500);
-      SetBlipScale(blip, 0.7);
-      SetBlipAsShortRange(blip, true);
-      BeginTextCommandSetBlipName(BLIP_TEXT);
-      AddTextComponentSubstringPlayerName(place.label);
-      EndTextCommandSetBlipName(blip);
-      this.blips.push(blip);
-    }
+    if (inside) this.points.add("exit", { coords: inside, label: Locale("ROB_PROMPT_EXIT"), icon: "door-open", radius: 1.5, interval: 300, onPressed: () => this.exit() });
+    for (const place of content.places.values()) if (place.blip) this.blips.add(place.id, { coords: place.coords, label: place.label, sprite: 500, color: 0, scale: 0.7 });
   }
 
   async rob(id: string): Promise<void> {
@@ -63,8 +45,7 @@ class Spots {
   }
 
   async exit(): Promise<void> {
-    DoScreenFadeOut(300);
-    await sleep(350);
+    await fadeOut();
     const result = record(await triggerServerCallback(EVENTS.exit, []).catch(() => null));
     if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
     await sleep(400);
@@ -76,7 +57,12 @@ const spots = new Spots();
 const vaults = new Vaults();
 spots.rebuild();
 vaults.rebuild(content.targets.values());
-AddStateBagChangeHandler("", "global", (_bag: string, key: string, value: unknown) => vaults.changed(key, value === true));
+AddStateBagChangeHandler("", "global", (_bag: string, key: string, value: unknown) => {
+  if (!key.startsWith("rob:")) return;
+  vaults.changed(key, value === true);
+  // The handler runs before GlobalState holds the new value.
+  setTimeout(() => spots.points.refresh(), 0);
+});
 world.onChange("places", () => {
   content.places = readPlaces(world.get("places"));
   spots.rebuild();
@@ -90,11 +76,4 @@ world.onChange("targets", () => {
 onServerEvent(EVENTS.inside, { args: ([id]): [string | null] | null => (id == null ? [null] : typeof id === "string" ? [id] : null) }, (id) => {
   spots.insideId = id;
   spots.rebuild();
-});
-
-onPromptPressed((id) => {
-  if (id === "rob:exit") return void spots.exit();
-  if (spots.busy || !content.targets.has(id)) return;
-  spots.busy = true;
-  void spots.rob(id).finally(() => (spots.busy = false));
 });

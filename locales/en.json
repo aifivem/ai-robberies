@@ -87,6 +87,7 @@
   "ROB_PROMPT_TRUCK": "Ask about an armored truck (${0})",
   "ROB_PROMPT_TRUCK_PLANT": "Plant the charge on the rear doors",
   "ROB_PROMPT_TRUCK_LOOT": "Grab the cash",
+  "ROB_BLIP_TRUCK": "Armored truck",
   "ROB_TRUCK_STARTED": "An armored truck is parked where the map shows. Deal with the guards first.",
   "ROB_TRUCK_PLANTING": "Planting the charge",
   "ROB_TRUCK_LOOTING": "Grabbing the cash",
