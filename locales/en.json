@@ -15,7 +15,7 @@
   "ADMIN_TAB_PLACES": "Places",
   "ADMIN_TAB_PLACES_DESC": "Stores, banks and other places that can be robbed, with their police rules and cooldown.",
   "ADMIN_NEW_PLACE": "New place",
-  "ADMIN_DELETE_PLACE": "Delete this place? Its targets stop working until they name another place.",
+  "ADMIN_DELETE_PLACE": "Delete place",
   "ADMIN_C_PLACE": "Place",
   "ADMIN_C_PLACE_DESC": "Where the police are sent and how long the place stays empty after a robbery.",
   "ADMIN_F_LABEL": "Name",
@@ -32,7 +32,7 @@
   "ADMIN_TAB_TARGETS": "Targets",
   "ADMIN_TAB_TARGETS_DESC": "What can be robbed: registers, safes, lockers, vitrines and doors. Each names its place.",
   "ADMIN_NEW_TARGET": "New target",
-  "ADMIN_DELETE_TARGET": "Delete this target?",
+  "ADMIN_DELETE_TARGET": "Delete target",
   "ADMIN_C_TARGET": "Target",
   "ADMIN_C_TARGET_DESC": "Stand at the spot the robber works at and use your position.",
   "ADMIN_F_PLACE": "Place",
@@ -114,5 +114,6 @@
   "ADMIN_P_TRUCK_ITEM": "c4",
   "ADMIN_F_TRUCK_SPAWNS": "Truck spawns",
   "ADMIN_ADD_TRUCK_SPAWN": "Add spawn",
-  "ADMIN_F_TRUCK_SPAWN": "Spawn"
+  "ADMIN_F_TRUCK_SPAWN": "Spawn",
+  "ADMIN_DELETE_PLACE_DESC": "Its targets stop working until they name another place."
 }

@@ -24986,6 +24986,7 @@ const robberiesSchema = {
 			desc: "ADMIN_TAB_PLACES_DESC",
 			createLabel: "ADMIN_NEW_PLACE",
 			deleteLabel: "ADMIN_DELETE_PLACE",
+			deleteDesc: "ADMIN_DELETE_PLACE_DESC",
 			cards: [{
 				icon: "store",
 				title: "ADMIN_C_PLACE",
