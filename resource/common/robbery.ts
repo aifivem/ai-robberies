@@ -1,4 +1,12 @@
-import { bool, int, num, record, str, vec4, type Vec4 } from "@aicore-fivem/lib/shared";
+import {
+  bool,
+  int,
+  num,
+  record,
+  str,
+  vec4,
+  type Vec4,
+} from "@aicore-fivem/lib/shared"
 
 /** ai-robberies' contracts and panel content. No natives. */
 
@@ -27,59 +35,70 @@ export const EVENTS = {
   truckLooted: "ai-robberies:truckLooted",
   /** Server -> players who knew the truck: () the truck job is over. */
   truckEnd: "ai-robberies:client:truckEnd",
-} as const;
+} as const
 
 /** ai-core metadata key: the house a character is inside (a character that left the game inside comes back at the door). */
-export const INSIDE_META = "robbery_house";
+export const INSIDE_META = "robbery_house"
 
 /** GlobalState key of a target that was robbed and waits for its place's cooldown (true while emptied). */
-export const robbedKey = (targetId: string) => `rob:${targetId}`;
+export const robbedKey = (targetId: string) => `rob:${targetId}`
 
 /**
  * register / safe / locker / vitrine / loot give money and items; door opens an ai-doorlock door until the cooldown
  * ends; entry breaks into a house (a place with an interior) and takes the robber inside.
  */
-export type TargetKind = "register" | "safe" | "locker" | "vitrine" | "door" | "entry" | "loot";
-const KINDS: TargetKind[] = ["register", "safe", "locker", "vitrine", "door", "entry", "loot"];
+export type TargetKind =
+  "register" | "safe" | "locker" | "vitrine" | "door" | "entry" | "loot"
+const KINDS: TargetKind[] = [
+  "register",
+  "safe",
+  "locker",
+  "vitrine",
+  "door",
+  "entry",
+  "loot",
+]
 
-type Point = { x: number; y: number; z: number };
+type Point = { x: number; y: number; z: number }
 const point = (v: unknown): Point => {
-  const p = record(v);
-  return { x: num(p.x, 0), y: num(p.y, 0), z: num(p.z, 0) };
-};
+  const p = record(v)
+  return { x: num(p.x, 0), y: num(p.y, 0), z: num(p.z, 0) }
+}
 
-const ZERO4 = { x: 0, y: 0, z: 0, heading: 0 };
+const ZERO4 = { x: 0, y: 0, z: 0, heading: 0 }
 /** A panel point left at (0, 0, 0) means "none". */
 const optional4 = (v: unknown): Vec4 | null => {
-  const p = vec4(v, ZERO4);
-  return p.x === 0 && p.y === 0 ? null : p;
-};
+  const p = vec4(v, ZERO4)
+  return p.x === 0 && p.y === 0 ? null : p
+}
 
 export interface TruckSettings {
   /** Where robbers pay for an armored truck job; (0, 0, 0) turns the job off. */
-  giver: Vec4;
-  price: number;
-  minPolice: number;
+  giver: Vec4
+  price: number
+  minPolice: number
   /** Minutes between two trucks (server wide). */
-  cooldown: number;
+  cooldown: number
   /** Item spent to blow the rear doors. */
-  item: string;
-  cashMin: number;
-  cashMax: number;
-  spawns: Vec4[];
+  item: string
+  cashMin: number
+  cashMax: number
+  spawns: Vec4[]
 }
 
 export interface Settings {
-  policeJobs: string[];
-  account: string;
-  truck: TruckSettings;
+  policeJobs: string[]
+  account: string
+  truck: TruckSettings
 }
 
 export function readSettings(raw: unknown): Settings {
-  const v = record(raw);
-  const jobs = Array.isArray(v.policeJobs) ? v.policeJobs.filter((j): j is string => typeof j === "string") : [];
-  const t = record(v.truck);
-  const cashMin = int(t.cashMin, 2000, 0);
+  const v = record(raw)
+  const jobs = Array.isArray(v.policeJobs)
+    ? v.policeJobs.filter((j): j is string => typeof j === "string")
+    : []
+  const t = record(v.truck)
+  const cashMin = int(t.cashMin, 2000, 0)
   return {
     policeJobs: jobs.length > 0 ? jobs : ["police"],
     account: str(v.account, "cash", 32),
@@ -91,30 +110,32 @@ export function readSettings(raw: unknown): Settings {
       item: str(t.item, "c4", 48),
       cashMin,
       cashMax: Math.max(cashMin, int(t.cashMax, 5000, 0)),
-      spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) => vec4(record(row).coords, ZERO4)),
+      spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) =>
+        vec4(record(row).coords, ZERO4)
+      ),
     },
-  };
+  }
 }
 
 export interface Place {
-  id: string;
-  label: string;
-  coords: Point;
+  id: string
+  label: string
+  coords: Point
   /** Officers on duty needed before anything here can be robbed. */
-  minPolice: number;
+  minPolice: number
   /** Minutes a robbed target stays empty (and an opened door open). */
-  cooldown: number;
+  cooldown: number
   /** Percent chance the first target of a visit alerts the police. */
-  alertChance: number;
-  blip: boolean;
+  alertChance: number
+  blip: boolean
   /** Houses: where a robber appears inside after breaking in (the exit prompt is there too); null for other places. */
-  interior: Vec4 | null;
+  interior: Vec4 | null
 }
 
 export function readPlaces(raw: unknown): Map<string, Place> {
-  const out = new Map<string, Place>();
+  const out = new Map<string, Place>()
   for (const [id, value] of Object.entries(record(raw))) {
-    const v = record(value);
+    const v = record(value)
     out.set(id, {
       id,
       label: str(v.label, id, 48),
@@ -124,46 +145,48 @@ export function readPlaces(raw: unknown): Map<string, Place> {
       alertChance: int(v.alertChance, 100, 0, 100),
       blip: bool(v.blip, false),
       interior: optional4(v.interior),
-    });
+    })
   }
-  return out;
+  return out
 }
 
 export interface Target {
-  id: string;
-  place: string;
-  label: string;
-  kind: TargetKind;
-  coords: Point;
+  id: string
+  place: string
+  label: string
+  kind: TargetKind
+  coords: Point
   /** Item the player must carry (empty: none); `consume` spends one. */
-  item: string;
-  consume: boolean;
-  seconds: number;
-  cashMin: number;
-  cashMax: number;
+  item: string
+  consume: boolean
+  seconds: number
+  cashMin: number
+  cashMax: number
   /** Item reward (empty: none), rewardMin..rewardMax of it. */
-  reward: string;
-  rewardMin: number;
-  rewardMax: number;
+  reward: string
+  rewardMin: number
+  rewardMax: number
   /** ai-doorlock door id (door targets). */
-  door: string;
+  door: string
   /** Door targets without a door id swing this map object (a bank vault) locally on every client. */
-  vaultModel: string;
-  vaultClosed: number;
-  vaultOpen: number;
+  vaultModel: string
+  vaultClosed: number
+  vaultOpen: number
 }
 
 export function readTargets(raw: unknown): Map<string, Target> {
-  const out = new Map<string, Target>();
+  const out = new Map<string, Target>()
   for (const [id, value] of Object.entries(record(raw))) {
-    const v = record(value);
-    const cashMin = int(v.cashMin, 0, 0, 1_000_000);
-    const rewardMin = int(v.rewardMin, 0, 0, 100);
+    const v = record(value)
+    const cashMin = int(v.cashMin, 0, 0, 1_000_000)
+    const rewardMin = int(v.rewardMin, 0, 0, 100)
     out.set(id, {
       id,
       place: str(v.place, "", 48),
       label: str(v.label, id, 48),
-      kind: KINDS.includes(v.kind as TargetKind) ? (v.kind as TargetKind) : "register",
+      kind: KINDS.includes(v.kind as TargetKind)
+        ? (v.kind as TargetKind)
+        : "register",
       coords: point(v.coords),
       item: str(v.item, "", 48),
       consume: bool(v.consume, false),
@@ -177,18 +200,24 @@ export function readTargets(raw: unknown): Map<string, Target> {
       vaultModel: str(v.vaultModel, "", 64),
       vaultClosed: num(v.vaultClosed, 0, -720, 720),
       vaultOpen: num(v.vaultOpen, 0, -720, 720),
-    });
+    })
   }
-  return out;
+  return out
 }
 
 /** The animation each kind plays during its progress. */
 export const ANIMS: Record<TargetKind, { dict: string; clip: string }> = {
   register: { dict: "oddjobs@shop_robbery@rob_till", clip: "loop" },
   safe: { dict: "mini@safe_cracking", clip: "dial_turn_anti_fast_1" },
-  locker: { dict: "anim@heists@fleeca_bank@drilling", clip: "drill_straight_idle" },
+  locker: {
+    dict: "anim@heists@fleeca_bank@drilling",
+    clip: "drill_straight_idle",
+  },
   vitrine: { dict: "missheist_jewel", clip: "smash_case" },
   door: { dict: "anim@heists@ornate_bank@hack", clip: "hack_loop" },
   entry: { dict: "veh@break_in@0h@p_m_one@", clip: "low_force_entry_ds" },
-  loot: { dict: "anim@gangops@facility@servers@bodysearch@", clip: "player_search" },
-};
+  loot: {
+    dict: "anim@gangops@facility@servers@bodysearch@",
+    clip: "player_search",
+  },
+}
