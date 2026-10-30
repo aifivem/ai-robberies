@@ -800,16 +800,25 @@ async function seatPlayer(vehicle, source, seat) {
 		SetPedIntoVehicle(ped, vehicle, seat);
 	}, 2e3, 150).catch(() => !1) : !1;
 }
+function randomPlate() {
+	let digit = () => String(Math.floor(Math.random() * 10)), letter = () => "ABCDEFGHJKLMNPRSTUVWXYZ"[Math.floor(Math.random() * 23)] ?? "A";
+	return `${digit()}${digit()}${letter()}${letter()}${letter()}${digit()}${digit()}${digit()}`;
+}
 async function spawnVehicle(options) {
 	let type = options.asker === void 0 ? options.type ?? "automobile" : await vehicleType(options.model, options.asker);
 	if (!type) return null;
 	let { x, y, z, heading } = options.coords, vehicle = CreateVehicleServerSetter(GetHashKey(options.model), type, x, y, z, heading);
 	if (!await waitFor(() => DoesEntityExist(vehicle) || void 0, 5e3).catch(() => !1)) return null;
-	options.persistent !== !1 && SetEntityOrphanMode(vehicle, 2), options.plate && SetVehicleNumberPlateText(vehicle, options.plate.slice(0, 8)), options.bucket !== void 0 && SetEntityRoutingBucket(vehicle, options.bucket), options.locked && SetVehicleDoorsLocked(vehicle, 2);
+	options.persistent !== !1 && SetEntityOrphanMode(vehicle, 2);
+	let plate = (options.plate ?? randomPlate()).slice(0, 8);
+	SetVehicleNumberPlateText(vehicle, plate), options.bucket !== void 0 && SetEntityRoutingBucket(vehicle, options.bucket), options.locked && SetVehicleDoorsLocked(vehicle, 2);
 	let state = Entity(vehicle).state;
 	options.fuel !== void 0 && state.set(VEHICLE_BAGS.fuel, options.fuel, !0), options.props && state.set(VEHICLE_BAGS.props, options.props, !0), options.setup && state.set(VEHICLE_BAGS.setup, options.setup, !0);
 	for (let [key, value] of Object.entries(options.bags ?? {})) state.set(key, value, !0);
-	options.keysTo !== void 0 && vehicleKeys.give(options.keysTo, vehicle, options.purpose ?? "temporary");
+	if (options.keysTo !== void 0) {
+		let synced = await waitFor(() => !DoesEntityExist(vehicle) || GetVehicleNumberPlateText(vehicle).trim() === plate.trim() || void 0, 3e3).catch(() => !1);
+		vehicleKeys.give(options.keysTo, synced && DoesEntityExist(vehicle) ? vehicle : plate.trim(), options.purpose ?? "temporary");
+	}
 	let riders = [...options.driver === void 0 ? [] : [{
 		source: options.driver,
 		seat: -1
