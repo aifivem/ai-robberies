@@ -8,7 +8,7 @@ import {
   Points,
   progress,
 } from "@aicore-fivem/lib/client";
-import { isRecord, vec4, type Vec4 } from "@aicore-fivem/lib/shared";
+import { readVec4, type Vec4 } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { ANIMS, EVENTS } from "common/robbery";
 import { content, FALLBACK, world } from "./content";
@@ -109,14 +109,16 @@ world.onChange("targets", () => {
   vaults.rebuild(content.targets.values());
 });
 
-const NOWHERE: Vec4 = { x: 0, y: 0, z: 0, heading: 0 };
 onServerEvent(
   EVENTS.inside,
   {
-    args: ([id, to]): [string | null, Vec4] | null =>
-      (id == null || typeof id === "string") && isRecord(to)
-        ? [id ?? null, vec4(to, NOWHERE)]
-        : null,
+    // A malformed target is refused (never a teleport to 0, 0, 0).
+    args: ([id, to]): [string | null, Vec4] | null => {
+      const point = readVec4(to);
+      return (id == null || typeof id === "string") && point
+        ? [id ?? null, point]
+        : null;
+    },
   },
   (id, to) => {
     spots.insideId = id;

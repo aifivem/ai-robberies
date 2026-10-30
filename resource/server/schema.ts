@@ -1,4 +1,5 @@
 import type { PanelSchema } from "@aicore-fivem/shared";
+import { BLIP_STYLE_FIELDS } from "@aicore-fivem/lib/shared";
 
 /** ai-robberies' panel: places (store, bank, jewelery), what can be robbed there, and who counts as police. */
 export const robberiesSchema: PanelSchema = {
@@ -20,11 +21,7 @@ export const robberiesSchema: PanelSchema = {
         blip: {
           type: "object",
           optional: true,
-          fields: {
-            sprite: { type: "number", min: 0, max: 1000, integer: true },
-            color: { type: "number", min: 0, max: 100, integer: true },
-            scale: { type: "number", min: 0.3, max: 2 },
-          },
+          fields: BLIP_STYLE_FIELDS,
         },
         truck: {
           type: "object",

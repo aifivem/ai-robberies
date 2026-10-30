@@ -2,6 +2,7 @@ import {
   bool,
   int,
   num,
+  readBlipStyle,
   record,
   str,
   vec4,
@@ -121,11 +122,7 @@ export function readSettings(raw: unknown): Settings {
   return {
     policeJobs: jobs.length > 0 ? jobs : ["police"],
     account: str(v.account, "cash", 32),
-    blip: {
-      sprite: int(blip.sprite, 500, 0, 1000),
-      color: int(blip.color, 0, 0, 100),
-      scale: num(blip.scale, 0.7, 0.3, 2),
-    },
+    blip: readBlipStyle(blip, { sprite: 500, color: 0, scale: 0.7 }),
     truck: {
       giver: vec4(t.giver, ZERO4),
       price: int(t.price, 500, 0),

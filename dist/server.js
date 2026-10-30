@@ -83,7 +83,35 @@ const oneArg = (read) => ([value]) => {
 }, fail = (error) => ({
 	ok: !1,
 	error
-}), isObject = (value) => typeof value == "object" && !!value && !Array.isArray(value);
+}), BLIP_STYLE_FIELDS = {
+	sprite: {
+		type: "number",
+		min: 0,
+		max: 1e3,
+		integer: !0
+	},
+	color: {
+		type: "number",
+		min: 0,
+		max: 100,
+		integer: !0
+	},
+	scale: {
+		type: "number",
+		min: .3,
+		max: 2
+	}
+};
+function readBlipStyle(value, fallback) {
+	let v = record(value);
+	return {
+		sprite: int(v.sprite, fallback.sprite, 0, 1e3),
+		color: int(v.color, fallback.color, 0, 100),
+		scale: num(v.scale, fallback.scale, .3, 2)
+	};
+}
+// ../../../packages/lib/src/shared/records.ts
+const isObject = (value) => typeof value == "object" && !!value && !Array.isArray(value);
 function readRecords(raw, readOne) {
 	let out = new Map();
 	if (!isObject(raw)) return out;
@@ -971,6 +999,10 @@ var OnlinePlayers = class {
 	character(source) {
 		return this.start(), this.players.get(source)?.character ?? null;
 	}
+	name(source, options = {}) {
+		let c = this.character(source);
+		return c ? `${c.firstname} ${c.lastname}` : options.fallback === !1 ? "" : GetPlayerName(String(source));
+	}
 	jobs(source) {
 		return this.start(), this.players.get(source)?.jobNames ?? [];
 	}
@@ -1455,11 +1487,11 @@ function readSettings(raw) {
 	return {
 		policeJobs: jobs.length > 0 ? jobs : ["police"],
 		account: str(v.account, "cash", 32),
-		blip: {
-			sprite: int(blip.sprite, 500, 0, 1e3),
-			color: int(blip.color, 0, 0, 100),
-			scale: num(blip.scale, .7, .3, 2)
-		},
+		blip: readBlipStyle(blip, {
+			sprite: 500,
+			color: 0,
+			scale: .7
+		}),
 		truck: {
 			giver: vec4(t.giver, ZERO4),
 			price: int(t.price, 500, 0),
@@ -1539,25 +1571,7 @@ const robberiesSchema = {
 				blip: {
 					type: "object",
 					optional: !0,
-					fields: {
-						sprite: {
-							type: "number",
-							min: 0,
-							max: 1e3,
-							integer: !0
-						},
-						color: {
-							type: "number",
-							min: 0,
-							max: 100,
-							integer: !0
-						},
-						scale: {
-							type: "number",
-							min: .3,
-							max: 2
-						}
-					}
+					fields: BLIP_STYLE_FIELDS
 				},
 				truck: {
 					type: "object",
