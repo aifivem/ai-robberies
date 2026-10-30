@@ -15,7 +15,11 @@ try{
 	const DEFAULT_CALLBACK_TIMEOUT = 3e4;
 
 // ../../../packages/lib/src/shared/wait.ts
-/**
+/** Resolves after `ms` milliseconds. */
+	function sleep(ms) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+	/**
 	* Resolves with the first value `check` returns that is not undefined, checking once per tick.
 	* Rejects after `timeoutMs` (default 10 s); pass `false` to wait forever.
 	* Return `cond || undefined` from `check` to wait for a truthy condition.
@@ -54,6 +58,16 @@ try{
 	/** The value as a plain object, or an empty one. */
 	function record(value) {
 		return typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+	}
+	/** A position with heading; each missing field comes from the fallback. */
+	function vec4(value, fallback) {
+		const v = record(value);
+		return {
+			x: num(v.x, fallback.x),
+			y: num(v.y, fallback.y),
+			z: num(v.z, fallback.z),
+			heading: num(v.heading, fallback.heading)
+		};
 	}
 
 // ../../../packages/lib/src/shared/index.ts
@@ -623,7 +637,27 @@ try{
 		/** Callback: (targetId) -> { ok, token, seconds } starts robbing a target (checks, item, police count). */
 		start: "ai-robberies:start",
 		/** Callback: (token) -> { ok } the progress ran out: reward, cooldown. */
-		finish: "ai-robberies:finish"
+		finish: "ai-robberies:finish",
+		/** Callback: () -> { ok } leaves the house the player is inside. */
+		exit: "ai-robberies:exit",
+		/** Server -> player: (placeId | null) the player is inside this house now (or left). */
+		inside: "ai-robberies:client:inside",
+		/** Callback: () -> { ok } pays for an armored truck job at the giver. */
+		truckStart: "ai-robberies:truckStart",
+		/** Server -> player: (netId, x, y, z) the armored truck to rob and its rear doors. */
+		truckJob: "ai-robberies:client:truckJob",
+		/** Callback: () -> { ok, token, seconds } starts planting the charge at the truck's rear doors. */
+		truckPlant: "ai-robberies:truckPlant",
+		/** Callback: (token) -> { ok } the charge is planted (the doors blow after a fuse). */
+		truckPlanted: "ai-robberies:truckPlanted",
+		/** Server -> players near the truck: (netId) the rear doors are open. */
+		truckOpen: "ai-robberies:client:truckOpen",
+		/** Callback: () -> { ok, token, seconds } starts grabbing the cash. */
+		truckLoot: "ai-robberies:truckLoot",
+		/** Callback: (token) -> { ok } the cash is grabbed. */
+		truckLooted: "ai-robberies:truckLooted",
+		/** Server -> players who knew the truck: () the truck job is over. */
+		truckEnd: "ai-robberies:client:truckEnd"
 	};
 	/** GlobalState key of a target that was robbed and waits for its place's cooldown (true while emptied). */
 	const robbedKey = (targetId) => `rob:${targetId}`;
@@ -632,7 +666,9 @@ try{
 		"safe",
 		"locker",
 		"vitrine",
-		"door"
+		"door",
+		"entry",
+		"loot"
 	];
 	const point = (v) => {
 		const p = record(v);
@@ -642,6 +678,37 @@ try{
 			z: num(p.z, 0)
 		};
 	};
+	const ZERO4 = {
+		x: 0,
+		y: 0,
+		z: 0,
+		heading: 0
+	};
+	/** A panel point left at (0, 0, 0) means "none". */
+	const optional4 = (v) => {
+		const p = vec4(v, ZERO4);
+		return p.x === 0 && p.y === 0 ? null : p;
+	};
+	function readSettings(raw) {
+		const v = record(raw);
+		const jobs = Array.isArray(v.policeJobs) ? v.policeJobs.filter((j) => typeof j === "string") : [];
+		const t = record(v.truck);
+		const cashMin = int(t.cashMin, 2e3, 0);
+		return {
+			policeJobs: jobs.length > 0 ? jobs : ["police"],
+			account: str(v.account, "cash", 32),
+			truck: {
+				giver: vec4(t.giver, ZERO4),
+				price: int(t.price, 500, 0),
+				minPolice: int(t.minPolice, 2, 0, 32),
+				cooldown: int(t.cooldown, 45, 1, 1440),
+				item: str(t.item, "c4", 48),
+				cashMin,
+				cashMax: Math.max(cashMin, int(t.cashMax, 5e3, 0)),
+				spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) => vec4(record(row).coords, ZERO4))
+			}
+		};
+	}
 	function readPlaces(raw) {
 		const out = /* @__PURE__ */ new Map();
 		for (const [id, value] of Object.entries(record(raw))) {
@@ -653,7 +720,8 @@ try{
 				minPolice: int(v.minPolice, 0, 0, 32),
 				cooldown: int(v.cooldown, 30, 1, 1440),
 				alertChance: int(v.alertChance, 100, 0, 100),
-				blip: bool(v.blip, false)
+				blip: bool(v.blip, false),
+				interior: optional4(v.interior)
 			});
 		}
 		return out;
@@ -707,8 +775,142 @@ try{
 		door: {
 			dict: "anim@heists@ornate_bank@hack",
 			clip: "hack_loop"
+		},
+		entry: {
+			dict: "veh@break_in@0h@p_m_one@",
+			clip: "low_force_entry_ds"
+		},
+		loot: {
+			dict: "anim@gangops@facility@servers@bodysearch@",
+			clip: "player_search"
 		}
 	};
+
+// resource/client/content.ts
+/** The panel files every client module reads, parsed again after each change. */
+	const world = new AdminWorld([
+		"settings",
+		"places",
+		"targets"
+	]);
+	const content = {
+		settings: readSettings(world.get("settings")),
+		places: readPlaces(world.get("places")),
+		targets: readTargets(world.get("targets"))
+	};
+	world.onChange("settings", () => content.settings = readSettings(world.get("settings")));
+	const texts = loadLocaleTexts();
+	/** The translated error of a callback answer. */
+	const errorText = (v, fallback) => {
+		const key = typeof record(v).error === "string" ? String(record(v).error) : fallback;
+		return texts[key] ?? key;
+	};
+
+// resource/client/truck.ts
+	const GIVER = "rob:truck:giver";
+	const REAR = "rob:truck:rear";
+	/**
+	* The armored truck job on this client: the giver's prompt, a route blip to the truck the server spawned, and a
+	* prompt at its rear doors (plant the charge, then grab the cash). The server checks every step.
+	*/
+	var TruckJob = class {
+		giverZone = new Zones();
+		blip = 0;
+		netId = 0;
+		open = false;
+		rearZone = new Zones();
+		busy = false;
+		rebuildGiver() {
+			this.giverZone.clear();
+			const { giver, price } = content.settings.truck;
+			if (giver.x === 0 && giver.y === 0) return;
+			this.giverZone.add(GIVER, {
+				shape: {
+					type: "sphere",
+					center: giver,
+					radius: 1.5
+				},
+				interval: 500,
+				onEnter: () => showPrompt(GIVER, Locale("ROB_PROMPT_TRUCK", price)),
+				onExit: () => hidePrompt(GIVER)
+			});
+		}
+		job(netId, rear) {
+			this.netId = netId;
+			if (this.blip) RemoveBlip(this.blip);
+			this.blip = AddBlipForCoord(rear.x, rear.y, rear.z);
+			SetBlipSprite(this.blip, 67);
+			SetBlipColour(this.blip, 1);
+			SetBlipRoute(this.blip, true);
+			this.rearZone.clear();
+			this.rearZone.add(REAR, {
+				shape: {
+					type: "sphere",
+					center: rear,
+					radius: 2
+				},
+				interval: 300,
+				onEnter: () => showPrompt(REAR, Locale(this.open ? "ROB_PROMPT_TRUCK_LOOT" : "ROB_PROMPT_TRUCK_PLANT")),
+				onExit: () => hidePrompt(REAR)
+			});
+		}
+		opened(netId) {
+			if (netId === this.netId) this.open = true;
+		}
+		end() {
+			if (this.blip) RemoveBlip(this.blip);
+			this.blip = 0;
+			this.netId = 0;
+			this.open = false;
+			this.rearZone.clear();
+			hidePrompt(REAR);
+		}
+		async start() {
+			const result = record(await triggerServerCallback(EVENTS.truckStart, [], 15e3).catch(() => null));
+			if (result.ok !== true) return notify(errorText(result, "ROB_ERR_FAR"), "error");
+			notify(Locale("ROB_TRUCK_STARTED"), "info", 8e3);
+		}
+		/** Plant or loot, whichever the doors allow now: two-step timed action. */
+		async rear() {
+			const loot = this.open;
+			const started = record(await triggerServerCallback(loot ? EVENTS.truckLoot : EVENTS.truckPlant, []).catch(() => null));
+			if (started.ok !== true || typeof started.token !== "number" || typeof started.seconds !== "number") return notify(errorText(started, "ROB_ERR_FAR"), "error");
+			const anim = loot ? {
+				dict: "anim@heists@ornate_bank@grab_cash",
+				clip: "grab"
+			} : {
+				dict: "anim@heists@ornate_bank@thermal_charge",
+				clip: "thermal_charge"
+			};
+			if (!await progress({
+				label: Locale(loot ? "ROB_TRUCK_LOOTING" : "ROB_TRUCK_PLANTING"),
+				duration: started.seconds * 1e3,
+				anim
+			})) return;
+			const result = record(await triggerServerCallback(loot ? EVENTS.truckLooted : EVENTS.truckPlanted, [started.token]).catch(() => null));
+			if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
+		}
+	};
+	const truck = new TruckJob();
+	truck.rebuildGiver();
+	world.onChange("settings", () => truck.rebuildGiver());
+	onServerEvent(EVENTS.truckJob, { args: ([netId, x, y, z]) => typeof netId === "number" && typeof x === "number" && typeof y === "number" && typeof z === "number" ? [
+		netId,
+		x,
+		y,
+		z
+	] : null }, (netId, x, y, z) => truck.job(netId, {
+		x,
+		y,
+		z
+	}));
+	onServerEvent(EVENTS.truckOpen, { args: ([netId]) => typeof netId === "number" ? [netId] : null }, (netId) => truck.opened(netId));
+	onServerEvent(EVENTS.truckEnd, () => truck.end());
+	onPromptPressed((id) => {
+		if (id !== GIVER && id !== REAR || truck.busy) return;
+		truck.busy = true;
+		(id === GIVER ? truck.start() : truck.rear()).finally(() => truck.busy = false);
+	});
 
 // resource/client/vaults.ts
 /**
@@ -754,29 +956,24 @@ try{
 	};
 
 // resource/client/index.ts
-	const world = new AdminWorld(["places", "targets"]);
-	const texts = loadLocaleTexts();
-	const content = {
-		places: readPlaces(world.get("places")),
-		targets: readTargets(world.get("targets"))
-	};
 	const BLIP_TEXT = "AIROB_BLIP";
 	AddTextEntry(BLIP_TEXT, "~a~");
-	const errorText = (v, fallback) => {
-		const key = typeof record(v).error === "string" ? String(record(v).error) : fallback;
-		return texts[key] ?? key;
-	};
-	/** A prompt at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. */
+	/**
+	* A prompt at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. Targets inside a
+	* house only exist while the player is inside it, together with its exit prompt.
+	*/
 	var Spots = class {
 		zones = new Zones();
 		blips = [];
 		busy = false;
+		insideId = null;
 		rebuild() {
 			this.zones.clear();
 			for (const blip of this.blips) RemoveBlip(blip);
 			this.blips = [];
 			for (const target of content.targets.values()) {
 				const id = target.id;
+				if ((content.places.get(target.place)?.interior != null && target.kind !== "entry") !== (this.insideId === target.place)) continue;
 				this.zones.add(id, {
 					shape: {
 						type: "sphere",
@@ -788,6 +985,17 @@ try{
 					onExit: () => hidePrompt(id)
 				});
 			}
+			const inside = this.insideId ? content.places.get(this.insideId)?.interior : null;
+			if (inside) this.zones.add("rob:exit", {
+				shape: {
+					type: "sphere",
+					center: inside,
+					radius: 1.5
+				},
+				interval: 300,
+				onEnter: () => showPrompt("rob:exit", Locale("ROB_PROMPT_EXIT")),
+				onExit: () => hidePrompt("rob:exit")
+			});
 			for (const place of content.places.values()) {
 				if (!place.blip) continue;
 				const blip = AddBlipForCoord(place.coords.x, place.coords.y, place.coords.z);
@@ -804,6 +1012,7 @@ try{
 			const target = content.targets.get(id);
 			if (!target) return;
 			const started = record(await triggerServerCallback(EVENTS.start, [id]).catch(() => null));
+			if (started.entered === true) return;
 			if (started.ok !== true || typeof started.token !== "number" || typeof started.seconds !== "number") return notify(errorText(started, "ROB_ERR_FAR"), "error");
 			if (!await progress({
 				label: Locale("ROB_WORKING"),
@@ -812,6 +1021,14 @@ try{
 			})) return;
 			const result = record(await triggerServerCallback(EVENTS.finish, [started.token]).catch(() => null));
 			if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
+		}
+		async exit() {
+			DoScreenFadeOut(300);
+			await sleep(350);
+			const result = record(await triggerServerCallback(EVENTS.exit, []).catch(() => null));
+			if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
+			await sleep(400);
+			DoScreenFadeIn(300);
 		}
 	};
 	const spots = new Spots();
@@ -828,7 +1045,12 @@ try{
 		spots.rebuild();
 		vaults.rebuild(content.targets.values());
 	});
+	onServerEvent(EVENTS.inside, { args: ([id]) => id == null ? [null] : typeof id === "string" ? [id] : null }, (id) => {
+		spots.insideId = id;
+		spots.rebuild();
+	});
 	onPromptPressed((id) => {
+		if (id === "rob:exit") return void spots.exit();
 		if (spots.busy || !content.targets.has(id)) return;
 		spots.busy = true;
 		spots.rob(id).finally(() => spots.busy = false);

@@ -7,17 +7,30 @@ export const robberiesSchema: PanelSchema = {
   files: {
     settings: {
       kind: "settings",
-      sync: "admin",
+      sync: "all",
       sections: {
         policeJobs: { type: "names", max: 10, itemMax: 32, pattern: "^[a-z0-9_]{2,32}$" },
         account: { type: "text", min: 2, max: 32 },
+        truck: {
+          type: "object",
+          fields: {
+            giver: { type: "vec4" },
+            price: { type: "number", min: 0, max: 1_000_000, integer: true },
+            minPolice: { type: "number", min: 0, max: 32, integer: true },
+            cooldown: { type: "number", min: 1, max: 1440, integer: true },
+            item: { type: "text", min: 2, max: 48 },
+            cashMin: { type: "number", min: 0, max: 1_000_000, integer: true },
+            cashMax: { type: "number", min: 0, max: 1_000_000, integer: true },
+            spawns: { type: "list", max: 30, of: { type: "object", fields: { coords: { type: "vec4" } } } },
+          },
+        },
       },
     },
     places: {
       kind: "records",
       sync: "all",
       labelPath: "label",
-      newRecord: { label: "", coords: { x: 0, y: 0, z: 0 }, minPolice: 0, cooldown: 30, alertChance: 100, blip: false },
+      newRecord: { label: "", coords: { x: 0, y: 0, z: 0 }, minPolice: 0, cooldown: 30, alertChance: 100, blip: false, interior: { x: 0, y: 0, z: 0, heading: 0 } },
       sections: {
         label: { type: "text", min: 1, max: 48 },
         coords: { type: "vec3" },
@@ -25,6 +38,7 @@ export const robberiesSchema: PanelSchema = {
         cooldown: { type: "number", min: 1, max: 1440, integer: true },
         alertChance: { type: "number", min: 0, max: 100, integer: true },
         blip: { type: "bool" },
+        interior: { type: "vec4" },
       },
     },
     targets: {
@@ -36,7 +50,7 @@ export const robberiesSchema: PanelSchema = {
       sections: {
         place: { type: "text", min: 1, max: 48 },
         label: { type: "text", min: 1, max: 48 },
-        kind: { type: "enum", values: ["register", "safe", "locker", "vitrine", "door"] },
+        kind: { type: "enum", values: ["register", "safe", "locker", "vitrine", "door", "entry", "loot"] },
         coords: { type: "vec3" },
         item: { type: "text", min: 0, max: 48 },
         consume: { type: "bool" },
@@ -76,6 +90,12 @@ export const robberiesSchema: PanelSchema = {
             { widget: "switch", path: "blip", label: "ADMIN_F_BLIP" },
           ],
         },
+        {
+          icon: "location-dot",
+          title: "ADMIN_C_HOUSE",
+          desc: "ADMIN_C_HOUSE_DESC",
+          fields: [{ widget: "point", path: "interior", label: "ADMIN_F_INTERIOR", hint: "ADMIN_H_INTERIOR", heading: true, ground: true }],
+        },
       ],
     },
     {
@@ -106,6 +126,8 @@ export const robberiesSchema: PanelSchema = {
                 { value: "locker", label: "ADMIN_O_LOCKER" },
                 { value: "vitrine", label: "ADMIN_O_VITRINE" },
                 { value: "door", label: "ADMIN_O_DOOR" },
+                { value: "entry", label: "ADMIN_O_ENTRY" },
+                { value: "loot", label: "ADMIN_O_LOOT" },
               ],
             },
             { widget: "point", path: "coords", label: "ADMIN_F_TARGET_COORDS", hint: "ADMIN_H_TARGET_COORDS", ground: true },
@@ -153,6 +175,29 @@ export const robberiesSchema: PanelSchema = {
           fields: [
             { widget: "tags", path: "policeJobs", label: "ADMIN_F_POLICE_JOBS", hint: "ADMIN_H_POLICE_JOBS", placeholder: "ADMIN_P_POLICE_JOBS" },
             { widget: "text", path: "account", label: "ADMIN_F_ACCOUNT", hint: "ADMIN_H_ACCOUNT", placeholder: "ADMIN_P_ACCOUNT" },
+          ],
+        },
+        {
+          icon: "car-side",
+          title: "ADMIN_C_TRUCK",
+          desc: "ADMIN_C_TRUCK_DESC",
+          fields: [
+            { widget: "point", path: "truck.giver", label: "ADMIN_F_TRUCK_GIVER", hint: "ADMIN_H_TRUCK_GIVER", heading: true, ground: true },
+            { widget: "number", path: "truck.price", label: "ADMIN_F_TRUCK_PRICE", hint: "ADMIN_H_TRUCK_PRICE", min: 0, max: 1_000_000, unit: "$" },
+            { widget: "number", path: "truck.minPolice", label: "ADMIN_F_MIN_POLICE", min: 0, max: 32 },
+            { widget: "number", path: "truck.cooldown", label: "ADMIN_F_TRUCK_COOLDOWN", min: 1, max: 1440, unit: "min" },
+            { widget: "text", path: "truck.item", label: "ADMIN_F_TRUCK_ITEM", hint: "ADMIN_H_TRUCK_ITEM", placeholder: "ADMIN_P_TRUCK_ITEM" },
+            { widget: "number", path: "truck.cashMin", label: "ADMIN_F_CASH_MIN", min: 0, max: 1_000_000, unit: "$" },
+            { widget: "number", path: "truck.cashMax", label: "ADMIN_F_CASH_MAX", min: 0, max: 1_000_000, unit: "$" },
+            {
+              widget: "list",
+              path: "truck.spawns",
+              label: "ADMIN_F_TRUCK_SPAWNS",
+              addLabel: "ADMIN_ADD_TRUCK_SPAWN",
+              max: 30,
+              newRow: { coords: { x: 0, y: 0, z: 0, heading: 0 } },
+              rows: [{ widget: "point", path: "coords", label: "ADMIN_F_TRUCK_SPAWN", heading: true, ground: true }],
+            },
           ],
         },
       ],

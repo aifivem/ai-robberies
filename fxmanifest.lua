@@ -18,6 +18,7 @@ dependencies {
 
 files {
 	'locales/*.json',
+	'data/settings.json',
 	'data/places.json',
 	'data/targets.json',
 }

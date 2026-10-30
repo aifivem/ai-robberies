@@ -163,6 +163,25 @@ const ADMIN = {
 	worldChangesCallback: (resource) => `${resource}:admin:worldChanges`
 };
 
+// ../../../packages/lib/src/shared/wait.ts
+/**
+* Resolves with the first value `check` returns that is not undefined, checking once per tick.
+* Rejects after `timeoutMs` (default 10 s); pass `false` to wait forever.
+* Return `cond || undefined` from `check` to wait for a truthy condition.
+*/
+function waitFor(check, timeoutMs = 1e4) {
+	return new Promise((resolve, reject) => {
+		const started = Date.now();
+		const poll = () => {
+			const value = check();
+			if (value !== void 0) return resolve(value);
+			if (timeoutMs !== false && Date.now() - started > timeoutMs) return reject(/* @__PURE__ */ new Error(`waitFor timed out after ${timeoutMs} ms`));
+			setTimeout(poll, 0);
+		};
+		poll();
+	});
+}
+
 // ../../../packages/lib/src/shared/read.ts
 /** Small readers for panel content (`data/*.json`): every one returns the fallback when the value is missing or wrong. */
 /** A finite number clamped to `[min, max]`, else the fallback. */
@@ -184,6 +203,16 @@ function str(value, fallback, max = 64) {
 /** The value as a plain object, or an empty one. */
 function record(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+}
+/** A position with heading; each missing field comes from the fallback. */
+function vec4(value, fallback) {
+	const v = record(value);
+	return {
+		x: num(v.x, fallback.x),
+		y: num(v.y, fallback.y),
+		z: num(v.z, fallback.z),
+		heading: num(v.heading, fallback.heading)
+	};
 }
 
 // ../../../packages/lib/src/shared/index.ts
@@ -24590,8 +24619,30 @@ const EVENTS = {
 	/** Callback: (targetId) -> { ok, token, seconds } starts robbing a target (checks, item, police count). */
 	start: "ai-robberies:start",
 	/** Callback: (token) -> { ok } the progress ran out: reward, cooldown. */
-	finish: "ai-robberies:finish"
+	finish: "ai-robberies:finish",
+	/** Callback: () -> { ok } leaves the house the player is inside. */
+	exit: "ai-robberies:exit",
+	/** Server -> player: (placeId | null) the player is inside this house now (or left). */
+	inside: "ai-robberies:client:inside",
+	/** Callback: () -> { ok } pays for an armored truck job at the giver. */
+	truckStart: "ai-robberies:truckStart",
+	/** Server -> player: (netId, x, y, z) the armored truck to rob and its rear doors. */
+	truckJob: "ai-robberies:client:truckJob",
+	/** Callback: () -> { ok, token, seconds } starts planting the charge at the truck's rear doors. */
+	truckPlant: "ai-robberies:truckPlant",
+	/** Callback: (token) -> { ok } the charge is planted (the doors blow after a fuse). */
+	truckPlanted: "ai-robberies:truckPlanted",
+	/** Server -> players near the truck: (netId) the rear doors are open. */
+	truckOpen: "ai-robberies:client:truckOpen",
+	/** Callback: () -> { ok, token, seconds } starts grabbing the cash. */
+	truckLoot: "ai-robberies:truckLoot",
+	/** Callback: (token) -> { ok } the cash is grabbed. */
+	truckLooted: "ai-robberies:truckLooted",
+	/** Server -> players who knew the truck: () the truck job is over. */
+	truckEnd: "ai-robberies:client:truckEnd"
 };
+/** ai-core metadata key: the house a character is inside (a character that left the game inside comes back at the door). */
+const INSIDE_META = "robbery_house";
 /** GlobalState key of a target that was robbed and waits for its place's cooldown (true while emptied). */
 const robbedKey = (targetId) => `rob:${targetId}`;
 const KINDS = [
@@ -24599,7 +24650,9 @@ const KINDS = [
 	"safe",
 	"locker",
 	"vitrine",
-	"door"
+	"door",
+	"entry",
+	"loot"
 ];
 const point = (v) => {
 	const p = record(v);
@@ -24609,12 +24662,35 @@ const point = (v) => {
 		z: num(p.z, 0)
 	};
 };
+const ZERO4 = {
+	x: 0,
+	y: 0,
+	z: 0,
+	heading: 0
+};
+/** A panel point left at (0, 0, 0) means "none". */
+const optional4 = (v) => {
+	const p = vec4(v, ZERO4);
+	return p.x === 0 && p.y === 0 ? null : p;
+};
 function readSettings(raw) {
 	const v = record(raw);
 	const jobs = Array.isArray(v.policeJobs) ? v.policeJobs.filter((j) => typeof j === "string") : [];
+	const t = record(v.truck);
+	const cashMin = int(t.cashMin, 2e3, 0);
 	return {
 		policeJobs: jobs.length > 0 ? jobs : ["police"],
-		account: str(v.account, "cash", 32)
+		account: str(v.account, "cash", 32),
+		truck: {
+			giver: vec4(t.giver, ZERO4),
+			price: int(t.price, 500, 0),
+			minPolice: int(t.minPolice, 2, 0, 32),
+			cooldown: int(t.cooldown, 45, 1, 1440),
+			item: str(t.item, "c4", 48),
+			cashMin,
+			cashMax: Math.max(cashMin, int(t.cashMax, 5e3, 0)),
+			spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) => vec4(record(row).coords, ZERO4))
+		}
 	};
 }
 function readPlaces(raw) {
@@ -24628,7 +24704,8 @@ function readPlaces(raw) {
 			minPolice: int(v.minPolice, 0, 0, 32),
 			cooldown: int(v.cooldown, 30, 1, 1440),
 			alertChance: int(v.alertChance, 100, 0, 100),
-			blip: bool(v.blip, false)
+			blip: bool(v.blip, false),
+			interior: optional4(v.interior)
 		});
 	}
 	return out;
@@ -24670,7 +24747,7 @@ const robberiesSchema = {
 	files: {
 		settings: {
 			kind: "settings",
-			sync: "admin",
+			sync: "all",
 			sections: {
 				policeJobs: {
 					type: "names",
@@ -24682,6 +24759,55 @@ const robberiesSchema = {
 					type: "text",
 					min: 2,
 					max: 32
+				},
+				truck: {
+					type: "object",
+					fields: {
+						giver: { type: "vec4" },
+						price: {
+							type: "number",
+							min: 0,
+							max: 1e6,
+							integer: true
+						},
+						minPolice: {
+							type: "number",
+							min: 0,
+							max: 32,
+							integer: true
+						},
+						cooldown: {
+							type: "number",
+							min: 1,
+							max: 1440,
+							integer: true
+						},
+						item: {
+							type: "text",
+							min: 2,
+							max: 48
+						},
+						cashMin: {
+							type: "number",
+							min: 0,
+							max: 1e6,
+							integer: true
+						},
+						cashMax: {
+							type: "number",
+							min: 0,
+							max: 1e6,
+							integer: true
+						},
+						spawns: {
+							type: "list",
+							max: 30,
+							of: {
+								type: "object",
+								fields: { coords: { type: "vec4" } }
+							}
+						}
+					}
 				}
 			}
 		},
@@ -24699,7 +24825,13 @@ const robberiesSchema = {
 				minPolice: 0,
 				cooldown: 30,
 				alertChance: 100,
-				blip: false
+				blip: false,
+				interior: {
+					x: 0,
+					y: 0,
+					z: 0,
+					heading: 0
+				}
 			},
 			sections: {
 				label: {
@@ -24726,7 +24858,8 @@ const robberiesSchema = {
 					max: 100,
 					integer: true
 				},
-				blip: { type: "bool" }
+				blip: { type: "bool" },
+				interior: { type: "vec4" }
 			}
 		},
 		targets: {
@@ -24774,7 +24907,9 @@ const robberiesSchema = {
 						"safe",
 						"locker",
 						"vitrine",
-						"door"
+						"door",
+						"entry",
+						"loot"
 					]
 				},
 				coords: { type: "vec3" },
@@ -24901,6 +25036,18 @@ const robberiesSchema = {
 						label: "ADMIN_F_BLIP"
 					}
 				]
+			}, {
+				icon: "location-dot",
+				title: "ADMIN_C_HOUSE",
+				desc: "ADMIN_C_HOUSE_DESC",
+				fields: [{
+					widget: "point",
+					path: "interior",
+					label: "ADMIN_F_INTERIOR",
+					hint: "ADMIN_H_INTERIOR",
+					heading: true,
+					ground: true
+				}]
 			}]
 		},
 		{
@@ -24956,6 +25103,14 @@ const robberiesSchema = {
 								{
 									value: "door",
 									label: "ADMIN_O_DOOR"
+								},
+								{
+									value: "entry",
+									label: "ADMIN_O_ENTRY"
+								},
+								{
+									value: "loot",
+									label: "ADMIN_O_LOOT"
 								}
 							]
 						},
@@ -25096,12 +25251,93 @@ const robberiesSchema = {
 					hint: "ADMIN_H_ACCOUNT",
 					placeholder: "ADMIN_P_ACCOUNT"
 				}]
+			}, {
+				icon: "car-side",
+				title: "ADMIN_C_TRUCK",
+				desc: "ADMIN_C_TRUCK_DESC",
+				fields: [
+					{
+						widget: "point",
+						path: "truck.giver",
+						label: "ADMIN_F_TRUCK_GIVER",
+						hint: "ADMIN_H_TRUCK_GIVER",
+						heading: true,
+						ground: true
+					},
+					{
+						widget: "number",
+						path: "truck.price",
+						label: "ADMIN_F_TRUCK_PRICE",
+						hint: "ADMIN_H_TRUCK_PRICE",
+						min: 0,
+						max: 1e6,
+						unit: "$"
+					},
+					{
+						widget: "number",
+						path: "truck.minPolice",
+						label: "ADMIN_F_MIN_POLICE",
+						min: 0,
+						max: 32
+					},
+					{
+						widget: "number",
+						path: "truck.cooldown",
+						label: "ADMIN_F_TRUCK_COOLDOWN",
+						min: 1,
+						max: 1440,
+						unit: "min"
+					},
+					{
+						widget: "text",
+						path: "truck.item",
+						label: "ADMIN_F_TRUCK_ITEM",
+						hint: "ADMIN_H_TRUCK_ITEM",
+						placeholder: "ADMIN_P_TRUCK_ITEM"
+					},
+					{
+						widget: "number",
+						path: "truck.cashMin",
+						label: "ADMIN_F_CASH_MIN",
+						min: 0,
+						max: 1e6,
+						unit: "$"
+					},
+					{
+						widget: "number",
+						path: "truck.cashMax",
+						label: "ADMIN_F_CASH_MAX",
+						min: 0,
+						max: 1e6,
+						unit: "$"
+					},
+					{
+						widget: "list",
+						path: "truck.spawns",
+						label: "ADMIN_F_TRUCK_SPAWNS",
+						addLabel: "ADMIN_ADD_TRUCK_SPAWN",
+						max: 30,
+						newRow: { coords: {
+							x: 0,
+							y: 0,
+							z: 0,
+							heading: 0
+						} },
+						rows: [{
+							widget: "point",
+							path: "coords",
+							label: "ADMIN_F_TRUCK_SPAWN",
+							heading: true,
+							ground: true
+						}]
+					}
+				]
 			}]
 		}
 	]
 };
 
-// resource/server/index.ts
+// resource/server/content.ts
 const core = resourceExport("ai-core");
 const panel = new AdminPanel(robberiesSchema);
 /** Panel content, parsed again after every change. */
@@ -25113,17 +25349,308 @@ const content = {
 panel.onChange("settings", () => content.settings = readSettings(panel.get("settings")));
 panel.onChange("places", () => content.places = readPlaces(panel.get("places")));
 panel.onChange("targets", () => content.targets = readTargets(panel.get("targets")));
-aiLogChannels({ robberies: {} });
 const fail = (error) => ({
 	ok: false,
 	error
 });
-const UNARMED = GetHashKey("WEAPON_UNARMED");
 const random = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
-const near = (source, at, metres) => {
+function pos(source) {
 	const [x = 0, y = 0, z = 0] = GetEntityCoords(GetPlayerPed(String(source)));
-	return Math.hypot(x - at.x, y - at.y, z - at.z) <= metres;
+	return {
+		x,
+		y,
+		z
+	};
+}
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const near = (source, at, metres) => distance(pos(source), at) <= metres;
+const policeOnDuty = () => content.settings.policeJobs.reduce((sum, job) => sum + core.GetOnDutyCount(job), 0);
+
+// resource/server/houses.ts
+/**
+* Robbers inside houses. Each house is its own routing bucket (7000 + n; ai-properties uses 5000+, ai-core 50000+),
+* so two houses sharing an interior never meet; the house is also the character's metadata for a rejoin.
+*/
+var Houses = class {
+	inside = /* @__PURE__ */ new Map();
+	buckets = /* @__PURE__ */ new Map();
+	bucketOf(id) {
+		let bucket = this.buckets.get(id);
+		if (bucket === void 0) {
+			bucket = 7e3 + this.buckets.size;
+			this.buckets.set(id, bucket);
+			SetRoutingBucketPopulationEnabled(bucket, false);
+			SetRoutingBucketEntityLockdownMode(bucket, "strict");
+		}
+		return bucket;
+	}
+	insideOf(source) {
+		return this.inside.get(source);
+	}
+	move(source, at, bucket, id) {
+		const ped = GetPlayerPed(String(source));
+		SetPlayerRoutingBucket(String(source), bucket);
+		SetEntityCoords(ped, at.x, at.y, at.z, false, false, false, false);
+		SetEntityHeading(ped, at.heading);
+		if (id) this.inside.set(source, id);
+		else this.inside.delete(source);
+		core.SetMeta(source, INSIDE_META, id);
+		emitNet(EVENTS.inside, source, id);
+	}
+	enter(source, place) {
+		if (place.interior) this.move(source, place.interior, this.bucketOf(place.id), place.id);
+	}
+	exit(source) {
+		const place = content.places.get(this.inside.get(source) ?? "");
+		if (!place) return false;
+		this.move(source, {
+			...place.coords,
+			heading: 0
+		}, 0, null);
+		return true;
+	}
+	/** A character that left the game inside a house comes back at its door. */
+	rejoin(source) {
+		const id = core.GetMeta(source, INSIDE_META);
+		const place = typeof id === "string" ? content.places.get(id) : void 0;
+		if (place) this.move(source, {
+			...place.coords,
+			heading: 0
+		}, 0, null);
+	}
+	drop(source) {
+		this.inside.delete(source);
+	}
 };
+const houses = new Houses();
+onClientCallback(EVENTS.exit, (source) => {
+	const place = content.places.get(houses.insideOf(source) ?? "");
+	if (!place?.interior) return fail("ROB_ERR_FAR");
+	const [x = 0, y = 0, z = 0] = GetEntityCoords(GetPlayerPed(String(source)));
+	if (Math.hypot(x - place.interior.x, y - place.interior.y, z - place.interior.z) > 3) return fail("ROB_ERR_FAR");
+	return houses.exit(source) ? { ok: true } : fail("ROB_ERR_FAR");
+}, { lock: true });
+on(CORE.playerLoadedEvent, (source) => houses.rejoin(source));
+on("playerDropped", () => houses.drop(Number(globalThis.source)));
+
+// resource/server/truck.ts
+const TRUCK_MODEL = "stockade";
+const GUARD_MODEL = "s_m_m_security_01";
+const GUARD_WEAPON = "WEAPON_CARBINERIFLE";
+const LIFETIME_MS = 12e5;
+const PLANT_SECONDS = 5;
+const FUSE_MS = 1e4;
+const LOOT_SECONDS = 10;
+/** The rear doors of a truck, 4 m behind its centre. */
+function rearOf(vehicle) {
+	const [x = 0, y = 0, z = 0] = GetEntityCoords(vehicle);
+	const h = GetEntityHeading(vehicle) * Math.PI / 180;
+	return {
+		x: x + Math.sin(h) * 4,
+		y: y - Math.cos(h) * 4,
+		z
+	};
+}
+/**
+* The armored truck job (one at a time, server wide): a parked stockade with two armed guards who attack players who
+* come close; the guards must be down before the charge goes on the rear doors; the doors blow after a fuse and the
+* cash can be grabbed once.
+*/
+var Truck = class {
+	vehicle = 0;
+	guards = [];
+	attacking = /* @__PURE__ */ new Set();
+	known = /* @__PURE__ */ new Set();
+	open = false;
+	looted = false;
+	nextAllowed = 0;
+	watcher = null;
+	ender = null;
+	runs = /* @__PURE__ */ new Map();
+	nextToken = 0;
+	get active() {
+		return this.vehicle !== 0 && DoesEntityExist(this.vehicle);
+	}
+	get waitMs() {
+		return Math.max(0, this.nextAllowed - Date.now());
+	}
+	async spawn(source) {
+		const s = content.settings.truck;
+		const at = s.spawns[random(0, s.spawns.length - 1)];
+		if (!at) return false;
+		this.nextAllowed = Date.now() + s.cooldown * 6e4;
+		const vehicle = CreateVehicleServerSetter(GetHashKey(TRUCK_MODEL), "automobile", at.x, at.y, at.z, at.heading);
+		if (!await waitFor(() => DoesEntityExist(vehicle) || void 0, 5e3).catch(() => false)) return false;
+		SetEntityOrphanMode(vehicle, 2);
+		SetVehicleDoorsLocked(vehicle, 2);
+		this.vehicle = vehicle;
+		this.open = false;
+		this.looted = false;
+		const h = at.heading * Math.PI / 180;
+		for (const side of [-1, 1]) {
+			const guard = CreatePed(4, GetHashKey(GUARD_MODEL), at.x + Math.cos(h) * 2.2 * side, at.y + Math.sin(h) * 2.2 * side, at.z, at.heading, true, true);
+			if (!await waitFor(() => DoesEntityExist(guard) || void 0, 5e3).catch(() => false)) continue;
+			SetEntityOrphanMode(guard, 2);
+			GiveWeaponToPed(guard, GetHashKey(GUARD_WEAPON), 250, false, true);
+			SetPedArmour(guard, 100);
+			this.guards.push(guard);
+		}
+		this.watcher = setInterval(() => this.guard(), 2e3);
+		this.ender = setTimeout(() => this.end(), LIFETIME_MS);
+		this.tell(source, true);
+		return true;
+	}
+	/** Tells a player where the truck is (once). */
+	tell(source, job) {
+		if (this.known.has(source) && !job) return;
+		this.known.add(source);
+		const rear = rearOf(this.vehicle);
+		emitNet(EVENTS.truckJob, source, NetworkGetNetworkIdFromEntity(this.vehicle), rear.x, rear.y, rear.z);
+	}
+	/** Guards turn on the first player within 40 m. */
+	guard() {
+		if (!this.active) return this.end();
+		const [x = 0, y = 0, z = 0] = GetEntityCoords(this.vehicle);
+		for (const source of core.GetLoadedSources()) {
+			if (distance(pos(source), {
+				x,
+				y,
+				z
+			}) > 40) continue;
+			for (const guard of this.guards) {
+				if (this.attacking.has(guard) || !DoesEntityExist(guard) || GetEntityHealth(guard) <= 100) continue;
+				TaskCombatPed(guard, GetPlayerPed(String(source)), 0, 16);
+				this.attacking.add(guard);
+			}
+		}
+	}
+	guardsDown() {
+		return this.guards.every((g) => !DoesEntityExist(g) || GetEntityHealth(g) <= 100);
+	}
+	atRear(source) {
+		return this.active && near(source, rearOf(this.vehicle), 3);
+	}
+	start(source, kind) {
+		const token = ++this.nextToken;
+		this.runs.set(source, {
+			token,
+			kind,
+			startedAt: Date.now()
+		});
+		return token;
+	}
+	take(source, token, kind, seconds) {
+		const run = this.runs.get(source);
+		this.runs.delete(source);
+		return run !== void 0 && run.token === token && run.kind === kind && Date.now() - run.startedAt >= seconds * 800 && this.atRear(source);
+	}
+	get isOpen() {
+		return this.open;
+	}
+	get isLooted() {
+		return this.looted;
+	}
+	blow() {
+		setTimeout(() => {
+			if (!this.active) return;
+			SetVehicleDoorBroken(this.vehicle, 2, false);
+			SetVehicleDoorBroken(this.vehicle, 3, false);
+			this.open = true;
+			const rear = rearOf(this.vehicle);
+			for (const source of core.GetLoadedSources()) if (distance(pos(source), rear) <= 100) this.tell(source, false);
+			const netId = NetworkGetNetworkIdFromEntity(this.vehicle);
+			for (const source of this.known) emitNet(EVENTS.truckOpen, source, netId);
+		}, FUSE_MS);
+	}
+	loot() {
+		this.looted = true;
+		if (this.ender) clearTimeout(this.ender);
+		this.ender = setTimeout(() => this.end(), 6e4);
+	}
+	end() {
+		if (this.watcher) clearInterval(this.watcher);
+		if (this.ender) clearTimeout(this.ender);
+		this.watcher = null;
+		this.ender = null;
+		for (const entity of [this.vehicle, ...this.guards]) if (entity && DoesEntityExist(entity)) DeleteEntity(entity);
+		for (const source of this.known) emitNet(EVENTS.truckEnd, source);
+		this.vehicle = 0;
+		this.guards = [];
+		this.attacking.clear();
+		this.known.clear();
+		this.runs.clear();
+	}
+};
+const truck = new Truck();
+onClientCallback(EVENTS.truckStart, async (source) => {
+	const s = content.settings.truck;
+	if (s.giver.x === 0 && s.giver.y === 0) return fail("ROB_ERR_FAR");
+	if (!near(source, s.giver, 3)) return fail("ROB_ERR_FAR");
+	if (truck.active) return fail("ROB_ERR_TRUCK_BUSY");
+	if (truck.waitMs > 0) return fail("ROB_ERR_TRUCK_WAIT");
+	if (policeOnDuty() < s.minPolice) return fail("ROB_ERR_POLICE");
+	if (s.spawns.length === 0) return fail("ROB_ERR_FAR");
+	if (!core.RemoveMoney(source, "bank", s.price, "robbery:truck")) return fail("ROB_ERR_MONEY");
+	if (!await truck.spawn(source)) {
+		core.AddMoney(source, "bank", s.price, "robbery:truck:refund");
+		return fail("ROB_ERR_FAR");
+	}
+	aiLog("robberies", "armored truck job", { source });
+	return { ok: true };
+}, { lock: true });
+onClientCallback(EVENTS.truckPlant, (source) => {
+	if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
+	if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
+	if ((optionalExport("ai-inventory")?.GetItemCount(source, content.settings.truck.item) ?? 0) < 1) return fail("ROB_ERR_ITEM");
+	return {
+		ok: true,
+		token: truck.start(source, "plant"),
+		seconds: PLANT_SECONDS
+	};
+}, { lock: true });
+onClientCallback(EVENTS.truckPlanted, {
+	args: ([token]) => asArgs(typeof token === "number" ? token : null),
+	lock: true
+}, (source, token) => {
+	if (!truck.take(source, token, "plant", PLANT_SECONDS) || truck.isOpen) return fail("ROB_ERR_FAR");
+	if (!optionalExport("ai-inventory")?.RemoveItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
+	const p = pos(source);
+	optionalExport("ai-police")?.SendAlert(p.x, p.y, p.z, Locale("ROB_TRUCK_ALERT"));
+	notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS);
+	truck.blow();
+	return { ok: true };
+});
+onClientCallback(EVENTS.truckLoot, (source) => {
+	if (!truck.atRear(source) || !truck.isOpen) return fail("ROB_ERR_FAR");
+	if (truck.isLooted) return fail("ROB_ERR_EMPTY");
+	return {
+		ok: true,
+		token: truck.start(source, "loot"),
+		seconds: LOOT_SECONDS
+	};
+}, { lock: true });
+onClientCallback(EVENTS.truckLooted, {
+	args: ([token]) => asArgs(typeof token === "number" ? token : null),
+	lock: true
+}, (source, token) => {
+	if (!truck.take(source, token, "loot", LOOT_SECONDS) || truck.isLooted) return fail("ROB_ERR_EMPTY");
+	truck.loot();
+	const s = content.settings.truck;
+	const cash = random(s.cashMin, s.cashMax);
+	core.AddMoney(source, content.settings.account, cash, "robbery:truck");
+	notify(source, Locale("ROB_CASH", cash), "success");
+	aiLog("robberies", "armored truck looted", {
+		source,
+		metadata: { cash }
+	});
+	return { ok: true };
+});
+on("playerDropped", () => truck.runs.delete(Number(globalThis.source)));
+on("onResourceStop", (resource) => resource === ResourceName && truck.end());
+
+// resource/server/index.ts
+aiLogChannels({ robberies: {} });
+const UNARMED = GetHashKey("WEAPON_UNARMED");
 for (const id of content.targets.keys()) if (GlobalState[robbedKey(id)] === true) GlobalState.set(robbedKey(id), false, true);
 /** Robberies in progress (one per player, one player per target) and the police alerts already sent per place. */
 var Robberies = class {
@@ -25168,7 +25695,6 @@ var Robberies = class {
 	}
 };
 const robberies = new Robberies();
-const policeOnDuty = () => content.settings.policeJobs.reduce((sum, job) => sum + core.GetOnDutyCount(job), 0);
 onClientCallback(EVENTS.start, {
 	args: ([id]) => asArgs(typeof id === "string" ? id : null),
 	lock: true
@@ -25177,6 +25703,14 @@ onClientCallback(EVENTS.start, {
 	const place = target ? content.places.get(target.place) : void 0;
 	if (!target || !place) return fail("ROB_ERR_FAR");
 	if (!near(source, target.coords, 2.5)) return fail("ROB_ERR_FAR");
+	if (place.interior && target.kind !== "entry" && houses.insideOf(source) !== place.id) return fail("ROB_ERR_FAR");
+	if (target.kind === "entry" && GlobalState[robbedKey(id)] === true) {
+		houses.enter(source, place);
+		return {
+			ok: true,
+			entered: true
+		};
+	}
 	if (GlobalState[robbedKey(id)] === true) return fail("ROB_ERR_EMPTY");
 	if (robberies.taken(target, source)) return fail("ROB_ERR_BUSY");
 	if (policeOnDuty() < place.minPolice) return fail("ROB_ERR_POLICE");
@@ -25203,6 +25737,7 @@ onClientCallback(EVENTS.finish, {
 	if (target.item && target.consume && !inventory?.RemoveItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
 	GlobalState.set(robbedKey(target.id), true, true);
 	setTimeout(() => GlobalState.set(robbedKey(target.id), false, true), place.cooldown * 6e4);
+	if (target.kind === "entry") houses.enter(source, place);
 	if (target.kind === "door" && target.door) {
 		optionalExport("ai-doorlock")?.SetDoorState(target.door, false);
 		setTimeout(() => optionalExport("ai-doorlock")?.SetDoorState(target.door, true), place.cooldown * 6e4);

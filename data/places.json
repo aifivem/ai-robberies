@@ -9,7 +9,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_2": {
     "label": "Strawberry 24/7",
@@ -21,7 +27,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_3": {
     "label": "Davis LTD",
@@ -33,7 +45,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_4": {
     "label": "Mirror Park LTD",
@@ -45,7 +63,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_5": {
     "label": "Vinewood 24/7",
@@ -57,7 +81,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_6": {
     "label": "Richman Glen LTD",
@@ -69,7 +99,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_7": {
     "label": "Palomino 24/7",
@@ -81,7 +117,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_8": {
     "label": "Senora 24/7",
@@ -93,7 +135,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_9": {
     "label": "Sandy Shores 24/7",
@@ -105,7 +153,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_10": {
     "label": "Harmony 24/7",
@@ -117,7 +171,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_11": {
     "label": "Mount Chiliad 24/7",
@@ -129,7 +189,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_12": {
     "label": "Grapeseed LTD",
@@ -141,7 +207,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_13": {
     "label": "Chumash 24/7",
@@ -153,7 +225,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "store_14": {
     "label": "Banham Canyon 24/7",
@@ -165,7 +243,13 @@
     "minPolice": 0,
     "cooldown": 30,
     "alertChance": 70,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_1": {
     "label": "Legion Square Fleeca",
@@ -177,7 +261,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_2": {
     "label": "Hawick Fleeca",
@@ -189,7 +279,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_3": {
     "label": "Burton Fleeca",
@@ -201,7 +297,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_4": {
     "label": "Del Perro Fleeca",
@@ -213,7 +315,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_5": {
     "label": "Great Ocean Fleeca",
@@ -225,7 +333,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "bank_6": {
     "label": "Route 68 Fleeca",
@@ -237,7 +351,13 @@
     "minPolice": 2,
     "cooldown": 60,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
   },
   "vangelico": {
     "label": "Vangelico Jewelry",
@@ -249,6 +369,408 @@
     "minPolice": 2,
     "cooldown": 45,
     "alertChance": 100,
-    "blip": false
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "house_1": {
+    "label": "House 1",
+    "coords": {
+      "x": 495.25,
+      "y": -1823.31,
+      "z": 28.87
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_2": {
+    "label": "House 2",
+    "coords": {
+      "x": 311.99,
+      "y": -1956.12,
+      "z": 24.62
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_3": {
+    "label": "House 3",
+    "coords": {
+      "x": 1193.67,
+      "y": -1656.54,
+      "z": 43.03
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_4": {
+    "label": "House 4",
+    "coords": {
+      "x": 179.29,
+      "y": -1923.98,
+      "z": 21.37
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_5": {
+    "label": "House 5",
+    "coords": {
+      "x": -64.58,
+      "y": -1449.61,
+      "z": 32.52
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_6": {
+    "label": "House 6",
+    "coords": {
+      "x": -138.22,
+      "y": -1470.78,
+      "z": 36.99
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_7": {
+    "label": "House 7",
+    "coords": {
+      "x": -884.14,
+      "y": -1072.51,
+      "z": 2.53
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_8": {
+    "label": "House 8",
+    "coords": {
+      "x": -1134.11,
+      "y": -1050.19,
+      "z": 2.15
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_9": {
+    "label": "House 9",
+    "coords": {
+      "x": -1089.85,
+      "y": -1680.31,
+      "z": 4.67
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_10": {
+    "label": "House 10",
+    "coords": {
+      "x": 960.01,
+      "y": -669.94,
+      "z": 58.45
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_11": {
+    "label": "House 11",
+    "coords": {
+      "x": 1240.51,
+      "y": -601.62,
+      "z": 69.78
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_12": {
+    "label": "House 12",
+    "coords": {
+      "x": 1098.57,
+      "y": -464.54,
+      "z": 67.32
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_13": {
+    "label": "House 13",
+    "coords": {
+      "x": 69.43,
+      "y": -56.69,
+      "z": 73.02
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_14": {
+    "label": "House 14",
+    "coords": {
+      "x": -102.84,
+      "y": -11.91,
+      "z": 70.52
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_15": {
+    "label": "House 15",
+    "coords": {
+      "x": -332.97,
+      "y": 57.08,
+      "z": 54.43
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_16": {
+    "label": "House 16",
+    "coords": {
+      "x": -1009.5,
+      "y": 479.12,
+      "z": 79.59
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_17": {
+    "label": "House 17",
+    "coords": {
+      "x": -371.74,
+      "y": 343.46,
+      "z": 109.94
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_18": {
+    "label": "House 18",
+    "coords": {
+      "x": 1435.45,
+      "y": 3657.04,
+      "z": 34.4
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_19": {
+    "label": "House 19",
+    "coords": {
+      "x": 1808.93,
+      "y": 3907.97,
+      "z": 33.74
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_20": {
+    "label": "House 20",
+    "coords": {
+      "x": -480.95,
+      "y": 6266.33,
+      "z": 13.63
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_21": {
+    "label": "House 21",
+    "coords": {
+      "x": -280.54,
+      "y": 6350.67,
+      "z": 32.6
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 266.11,
+      "y": -1007.61,
+      "z": -101.01,
+      "heading": 357.68
+    }
+  },
+  "house_22": {
+    "label": "House 22",
+    "coords": {
+      "x": -174.65,
+      "y": 502.47,
+      "z": 137.42
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": -174.27,
+      "y": 497.71,
+      "z": 137.65,
+      "heading": 191.5
+    }
   }
 }

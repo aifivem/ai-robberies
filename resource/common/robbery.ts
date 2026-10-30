@@ -1,4 +1,4 @@
-import { bool, int, num, record, str } from "@aicore-fivem/lib/shared";
+import { bool, int, num, record, str, vec4, type Vec4 } from "@aicore-fivem/lib/shared";
 
 /** ai-robberies' contracts and panel content. No natives. */
 
@@ -7,14 +7,40 @@ export const EVENTS = {
   start: "ai-robberies:start",
   /** Callback: (token) -> { ok } the progress ran out: reward, cooldown. */
   finish: "ai-robberies:finish",
+  /** Callback: () -> { ok } leaves the house the player is inside. */
+  exit: "ai-robberies:exit",
+  /** Server -> player: (placeId | null) the player is inside this house now (or left). */
+  inside: "ai-robberies:client:inside",
+  /** Callback: () -> { ok } pays for an armored truck job at the giver. */
+  truckStart: "ai-robberies:truckStart",
+  /** Server -> player: (netId, x, y, z) the armored truck to rob and its rear doors. */
+  truckJob: "ai-robberies:client:truckJob",
+  /** Callback: () -> { ok, token, seconds } starts planting the charge at the truck's rear doors. */
+  truckPlant: "ai-robberies:truckPlant",
+  /** Callback: (token) -> { ok } the charge is planted (the doors blow after a fuse). */
+  truckPlanted: "ai-robberies:truckPlanted",
+  /** Server -> players near the truck: (netId) the rear doors are open. */
+  truckOpen: "ai-robberies:client:truckOpen",
+  /** Callback: () -> { ok, token, seconds } starts grabbing the cash. */
+  truckLoot: "ai-robberies:truckLoot",
+  /** Callback: (token) -> { ok } the cash is grabbed. */
+  truckLooted: "ai-robberies:truckLooted",
+  /** Server -> players who knew the truck: () the truck job is over. */
+  truckEnd: "ai-robberies:client:truckEnd",
 } as const;
+
+/** ai-core metadata key: the house a character is inside (a character that left the game inside comes back at the door). */
+export const INSIDE_META = "robbery_house";
 
 /** GlobalState key of a target that was robbed and waits for its place's cooldown (true while emptied). */
 export const robbedKey = (targetId: string) => `rob:${targetId}`;
 
-/** register / safe / locker / vitrine give money and items; door opens an ai-doorlock door until the cooldown ends. */
-export type TargetKind = "register" | "safe" | "locker" | "vitrine" | "door";
-const KINDS: TargetKind[] = ["register", "safe", "locker", "vitrine", "door"];
+/**
+ * register / safe / locker / vitrine / loot give money and items; door opens an ai-doorlock door until the cooldown
+ * ends; entry breaks into a house (a place with an interior) and takes the robber inside.
+ */
+export type TargetKind = "register" | "safe" | "locker" | "vitrine" | "door" | "entry" | "loot";
+const KINDS: TargetKind[] = ["register", "safe", "locker", "vitrine", "door", "entry", "loot"];
 
 type Point = { x: number; y: number; z: number };
 const point = (v: unknown): Point => {
@@ -22,15 +48,52 @@ const point = (v: unknown): Point => {
   return { x: num(p.x, 0), y: num(p.y, 0), z: num(p.z, 0) };
 };
 
+const ZERO4 = { x: 0, y: 0, z: 0, heading: 0 };
+/** A panel point left at (0, 0, 0) means "none". */
+const optional4 = (v: unknown): Vec4 | null => {
+  const p = vec4(v, ZERO4);
+  return p.x === 0 && p.y === 0 ? null : p;
+};
+
+export interface TruckSettings {
+  /** Where robbers pay for an armored truck job; (0, 0, 0) turns the job off. */
+  giver: Vec4;
+  price: number;
+  minPolice: number;
+  /** Minutes between two trucks (server wide). */
+  cooldown: number;
+  /** Item spent to blow the rear doors. */
+  item: string;
+  cashMin: number;
+  cashMax: number;
+  spawns: Vec4[];
+}
+
 export interface Settings {
   policeJobs: string[];
   account: string;
+  truck: TruckSettings;
 }
 
 export function readSettings(raw: unknown): Settings {
   const v = record(raw);
   const jobs = Array.isArray(v.policeJobs) ? v.policeJobs.filter((j): j is string => typeof j === "string") : [];
-  return { policeJobs: jobs.length > 0 ? jobs : ["police"], account: str(v.account, "cash", 32) };
+  const t = record(v.truck);
+  const cashMin = int(t.cashMin, 2000, 0);
+  return {
+    policeJobs: jobs.length > 0 ? jobs : ["police"],
+    account: str(v.account, "cash", 32),
+    truck: {
+      giver: vec4(t.giver, ZERO4),
+      price: int(t.price, 500, 0),
+      minPolice: int(t.minPolice, 2, 0, 32),
+      cooldown: int(t.cooldown, 45, 1, 1440),
+      item: str(t.item, "c4", 48),
+      cashMin,
+      cashMax: Math.max(cashMin, int(t.cashMax, 5000, 0)),
+      spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) => vec4(record(row).coords, ZERO4)),
+    },
+  };
 }
 
 export interface Place {
@@ -44,6 +107,8 @@ export interface Place {
   /** Percent chance the first target of a visit alerts the police. */
   alertChance: number;
   blip: boolean;
+  /** Houses: where a robber appears inside after breaking in (the exit prompt is there too); null for other places. */
+  interior: Vec4 | null;
 }
 
 export function readPlaces(raw: unknown): Map<string, Place> {
@@ -58,6 +123,7 @@ export function readPlaces(raw: unknown): Map<string, Place> {
       cooldown: int(v.cooldown, 30, 1, 1440),
       alertChance: int(v.alertChance, 100, 0, 100),
       blip: bool(v.blip, false),
+      interior: optional4(v.interior),
     });
   }
   return out;
@@ -123,4 +189,6 @@ export const ANIMS: Record<TargetKind, { dict: string; clip: string }> = {
   locker: { dict: "anim@heists@fleeca_bank@drilling", clip: "drill_straight_idle" },
   vitrine: { dict: "missheist_jewel", clip: "smash_case" },
   door: { dict: "anim@heists@ornate_bank@hack", clip: "hack_loop" },
+  entry: { dict: "veh@break_in@0h@p_m_one@", clip: "low_force_entry_ds" },
+  loot: { dict: "anim@gangops@facility@servers@bodysearch@", clip: "player_search" },
 };
