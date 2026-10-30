@@ -1,8 +1,8 @@
-import { aiLog, inventory, notify, onClientCallback, optionalExport } from "@aicore-fivem/lib/server";
+import { aiLog, inventory, notify, onClientCallback, optionalExport, playersNearEntity } from "@aicore-fivem/lib/server";
 import { asArgs, waitFor } from "@aicore-fivem/lib/shared";
 import { Locale, ResourceName } from "common";
 import { EVENTS } from "common/robbery";
-import { content, core, distance, fail, near, policeOnDuty, pos, random } from "./content";
+import { content, core, fail, near, policeOnDuty, pos, random } from "./content";
 
 const TRUCK_MODEL = "stockade";
 const GUARD_MODEL = "s_m_m_security_01";
@@ -83,9 +83,7 @@ class Truck {
   /** Guards turn on the first player within 40 m. */
   private guard(): void {
     if (!this.active) return this.end();
-    const [x = 0, y = 0, z = 0] = GetEntityCoords(this.vehicle);
-    for (const source of core.GetLoadedSources()) {
-      if (distance(pos(source), { x, y, z }) > 40) continue;
+    for (const source of playersNearEntity(this.vehicle, 40)) {
       for (const guard of this.guards) {
         if (this.attacking.has(guard) || !DoesEntityExist(guard) || GetEntityHealth(guard) <= 100) continue;
         TaskCombatPed(guard, GetPlayerPed(String(source)), 0, 16);
@@ -128,8 +126,7 @@ class Truck {
       SetVehicleDoorBroken(this.vehicle, 2, false);
       SetVehicleDoorBroken(this.vehicle, 3, false);
       this.open = true;
-      const rear = rearOf(this.vehicle);
-      for (const source of core.GetLoadedSources()) if (distance(pos(source), rear) <= 100) this.tell(source, false);
+      for (const source of playersNearEntity(this.vehicle, 100)) this.tell(source, false);
       const netId = NetworkGetNetworkIdFromEntity(this.vehicle);
       for (const source of this.known) emitNet(EVENTS.truckOpen, source, netId);
     }, FUSE_MS);
