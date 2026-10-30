@@ -14,11 +14,12 @@ import {
   EVENTS,
   readPlaces,
   readTargets,
-  robbedKey,
 } from "common/robbery";
 import { content, errorText, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
+
+import { robbed } from "./robbed";
 
 /**
  * A point at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. Targets inside a
@@ -38,24 +39,13 @@ class Spots {
         content.places.get(target.place)?.interior != null &&
         target.kind !== "entry";
       if (house !== (this.insideId === target.place)) continue;
-      const robbed = () => GlobalState[robbedKey(id)] === true;
-      const at = {
+      this.points.add(id, {
         coords: target.coords,
         radius: 1.2,
         interval: 300,
-        onPressed: () => this.rob(id),
-      };
-      this.points.add(id, {
-        ...at,
-        label: Locale("ROB_PROMPT", target.label),
+        label: () => Locale(robbed.get(id) === true ? "ROB_PROMPT_EMPTY" : "ROB_PROMPT", target.label),
         icon: "mask",
-        canShow: () => !robbed(),
-      });
-      this.points.add(`${id}:empty`, {
-        ...at,
-        label: Locale("ROB_PROMPT_EMPTY", target.label),
-        icon: "box-open",
-        canShow: robbed,
+        onPressed: () => this.rob(id),
       });
     }
     const inside = this.insideId
@@ -123,16 +113,10 @@ const spots = new Spots();
 const vaults = new Vaults();
 spots.rebuild();
 vaults.rebuild(content.targets.values());
-AddStateBagChangeHandler(
-  "",
-  "global",
-  (_bag: string, key: string, value: unknown) => {
-    if (!key.startsWith("rob:")) return;
-    vaults.changed(key, value === true);
-    // The handler runs before GlobalState holds the new value.
-    setTimeout(() => spots.points.refresh(), 0);
-  },
-);
+robbed.onChange((id, value) => {
+  vaults.changed(id, value === true);
+  spots.points.refresh();
+});
 world.onChange("places", () => {
   content.places = readPlaces(world.get("places"));
   spots.rebuild();

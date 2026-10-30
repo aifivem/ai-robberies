@@ -1,25 +1,19 @@
-import {
-  aiLog,
-  aiLogChannels,
-  inventory,
-  notify,
-  onClientCallback,
-  optionalExport,
-} from "@aicore-fivem/lib/server";
+import { aiLog, aiLogChannels, GlobalGroup, inventory, notify, onClientCallback, optionalExport, stateBoolean } from "@aicore-fivem/lib/server";
 import { asArgs } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { EVENTS, robbedKey, type Target } from "common/robbery";
+import { EVENTS, ROBBED_PREFIX, type Target } from "common/robbery";
 import { content, core, fail, near, policeOnDuty, random } from "./content";
 import { houses } from "./houses";
 import "./truck";
+
+const robbed = new GlobalGroup(ROBBED_PREFIX, stateBoolean);
 
 aiLogChannels({ robberies: {} });
 const UNARMED = GetHashKey("WEAPON_UNARMED");
 
 // A restart forgets the cooldown timers: every target starts full again.
 for (const id of content.targets.keys())
-  if (GlobalState[robbedKey(id)] === true)
-    GlobalState.set(robbedKey(id), false, true);
+  if (robbed.get(id) === true) robbed.set(id, false);
 
 /** Robberies in progress (one per player, one player per target) and the police alerts already sent per place. */
 class Robberies {
@@ -92,11 +86,11 @@ onClientCallback(
       houses.insideOf(source) !== place.id
     )
       return fail("ROB_ERR_FAR");
-    if (target.kind === "entry" && GlobalState[robbedKey(id)] === true) {
+    if (target.kind === "entry" && robbed.get(id) === true) {
       houses.enter(source, place);
       return { ok: true, entered: true };
     }
-    if (GlobalState[robbedKey(id)] === true) return fail("ROB_ERR_EMPTY");
+    if (robbed.get(id) === true) return fail("ROB_ERR_EMPTY");
     if (robberies.taken(target, source)) return fail("ROB_ERR_BUSY");
     if (policeOnDuty() < place.minPolice) return fail("ROB_ERR_POLICE");
     if (target.item && !inventory.hasItem(source, target.item))
@@ -139,7 +133,7 @@ onClientCallback(
       !near(source, target.coords, 3)
     )
       return fail("ROB_ERR_FAR");
-    if (GlobalState[robbedKey(target.id)] === true)
+    if (robbed.get(target.id) === true)
       return fail("ROB_ERR_EMPTY");
     if (
       target.item &&
@@ -147,9 +141,9 @@ onClientCallback(
       !inventory.removeItem(source, target.item, 1)
     )
       return fail("ROB_ERR_ITEM");
-    GlobalState.set(robbedKey(target.id), true, true);
+    robbed.set(target.id, true);
     setTimeout(
-      () => GlobalState.set(robbedKey(target.id), false, true),
+      () => robbed.set(target.id, false),
       place.cooldown * 60_000,
     );
     if (target.kind === "entry") houses.enter(source, place);

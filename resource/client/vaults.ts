@@ -1,5 +1,6 @@
 import { Zones } from "@aicore-fivem/lib/client";
-import { robbedKey, type Target } from "common/robbery";
+import type { Target } from "common/robbery";
+import { robbed } from "./robbed";
 
 /**
  * Bank vault doors are map objects every client holds itself: near one, the client turns it to the open or closed
@@ -19,7 +20,7 @@ export class Vaults {
         interval: 1000,
         onEnter: () => {
           this.near.set(target.id, target);
-          this.apply(target, GlobalState[robbedKey(target.id)] === true);
+          this.apply(target, robbed.get(target.id) === true);
         },
         onExit: () => this.near.delete(target.id),
       });
@@ -27,9 +28,8 @@ export class Vaults {
   }
 
   /** A changed `rob:<id>` key of a vault the player is near. */
-  changed(key: string, open: boolean): void {
-    if (!key.startsWith("rob:")) return;
-    const target = this.near.get(key.slice(4));
+  changed(id: string, open: boolean): void {
+    const target = this.near.get(id);
     if (target) this.apply(target, open);
   }
 

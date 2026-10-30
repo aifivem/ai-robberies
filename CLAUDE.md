@@ -18,4 +18,4 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 
 ## Entry points
 
-- Checks and rewards `resource/server/index.ts`, houses `resource/server/houses.ts`, armored truck `resource/server/truck.ts`, panel `resource/server/schema.ts`; interaction points (lib `Points`, a Rob and an Emptied point per target picked by its GlobalState key) `resource/client/index.ts`, vault doors `resource/client/vaults.ts`, truck job `resource/client/truck.ts`.
+- Checks and rewards `resource/server/index.ts`, houses `resource/server/houses.ts`, armored truck `resource/server/truck.ts`, panel `resource/server/schema.ts`; interaction points (lib `Points`, one per target, its label follows the lib `GlobalGroup` mirror of `rob:<id>`) `resource/client/index.ts`, vault doors `resource/client/vaults.ts`, truck job `resource/client/truck.ts`.

@@ -40,8 +40,8 @@ export const EVENTS = {
 /** ai-core metadata key: the house a character is inside (a character that left the game inside comes back at the door). */
 export const INSIDE_META = "robbery_house";
 
-/** GlobalState key of a target that was robbed and waits for its place's cooldown (true while emptied). */
-export const robbedKey = (targetId: string) => `rob:${targetId}`;
+/** GlobalState prefix of a target that was robbed and waits for its place's cooldown (`rob:<id>`, true while emptied). */
+export const ROBBED_PREFIX = "rob:";
 
 /**
  * register / safe / locker / vitrine / loot give money and items; door opens an ai-doorlock door until the cooldown
