@@ -9,8 +9,8 @@ export const robberiesSchema: PanelSchema = {
       kind: "settings",
       sync: "all",
       sections: {
-        policeJobs: { type: "names", max: 10, itemMax: 32, pattern: "^[a-z0-9_]{2,32}$" },
-        account: { type: "text", min: 2, max: 32 },
+        policeJobs: { type: "names", lookup: "job", max: 10, itemMax: 32, pattern: "^[a-z0-9_]{2,32}$" },
+        account: { type: "text", lookup: "account", min: 2, max: 32 },
         truck: {
           type: "object",
           fields: {
@@ -18,7 +18,7 @@ export const robberiesSchema: PanelSchema = {
             price: { type: "number", min: 0, max: 1_000_000, integer: true },
             minPolice: { type: "number", min: 0, max: 32, integer: true },
             cooldown: { type: "number", min: 1, max: 1440, integer: true },
-            item: { type: "text", min: 2, max: 48 },
+            item: { type: "text", lookup: "item", min: 2, max: 48 },
             cashMin: { type: "number", min: 0, max: 1_000_000, integer: true },
             cashMax: { type: "number", min: 0, max: 1_000_000, integer: true },
             spawns: { type: "list", max: 30, of: { type: "object", fields: { coords: { type: "vec4" } } } },
@@ -52,12 +52,12 @@ export const robberiesSchema: PanelSchema = {
         label: { type: "text", min: 1, max: 48 },
         kind: { type: "enum", values: ["register", "safe", "locker", "vitrine", "door", "entry", "loot"] },
         coords: { type: "vec3" },
-        item: { type: "text", min: 0, max: 48 },
+        item: { type: "text", lookup: "item", min: 0, max: 48 },
         consume: { type: "bool" },
         seconds: { type: "number", min: 1, max: 600, integer: true },
         cashMin: { type: "number", min: 0, max: 1_000_000, integer: true },
         cashMax: { type: "number", min: 0, max: 1_000_000, integer: true },
-        reward: { type: "text", min: 0, max: 48 },
+        reward: { type: "text", lookup: "item", min: 0, max: 48 },
         rewardMin: { type: "number", min: 0, max: 100, integer: true },
         rewardMax: { type: "number", min: 0, max: 100, integer: true },
         door: { type: "text", min: 0, max: 64 },
@@ -83,7 +83,7 @@ export const robberiesSchema: PanelSchema = {
           title: "ADMIN_C_PLACE",
           desc: "ADMIN_C_PLACE_DESC",
           fields: [
-            { widget: "text", path: "label", label: "ADMIN_F_LABEL", placeholder: "ADMIN_P_LABEL" },
+            { widget: "text", path: "label", suggest: { from: "coords" }, label: "ADMIN_F_LABEL", placeholder: "ADMIN_P_LABEL" },
             { widget: "point", path: "coords", label: "ADMIN_F_COORDS", hint: "ADMIN_H_COORDS", ground: true },
             { widget: "number", path: "minPolice", label: "ADMIN_F_MIN_POLICE", hint: "ADMIN_H_MIN_POLICE", min: 0, max: 32 },
             { widget: "number", path: "cooldown", label: "ADMIN_F_COOLDOWN", hint: "ADMIN_H_COOLDOWN", min: 1, max: 1440, unit: "min" },
@@ -115,7 +115,7 @@ export const robberiesSchema: PanelSchema = {
           desc: "ADMIN_C_TARGET_DESC",
           fields: [
             { widget: "text", path: "place", label: "ADMIN_F_PLACE", hint: "ADMIN_H_PLACE", placeholder: "ADMIN_P_PLACE" },
-            { widget: "text", path: "label", label: "ADMIN_F_TARGET_LABEL", placeholder: "ADMIN_P_TARGET_LABEL" },
+            { widget: "text", path: "label", suggest: { from: "coords" }, label: "ADMIN_F_TARGET_LABEL", placeholder: "ADMIN_P_TARGET_LABEL" },
             {
               widget: "select",
               path: "kind",
@@ -133,7 +133,7 @@ export const robberiesSchema: PanelSchema = {
             },
             { widget: "point", path: "coords", label: "ADMIN_F_TARGET_COORDS", hint: "ADMIN_H_TARGET_COORDS", ground: true },
             { widget: "number", path: "seconds", label: "ADMIN_F_SECONDS", min: 1, max: 600, unit: "s" },
-            { widget: "text", path: "item", label: "ADMIN_F_ITEM", hint: "ADMIN_H_ITEM", placeholder: "ADMIN_P_ITEM" },
+            { widget: "text", lookup: "item", path: "item", label: "ADMIN_F_ITEM", hint: "ADMIN_H_ITEM", placeholder: "ADMIN_P_ITEM" },
             { widget: "switch", path: "consume", label: "ADMIN_F_CONSUME" },
           ],
         },
@@ -155,7 +155,7 @@ export const robberiesSchema: PanelSchema = {
           fields: [
             { widget: "number", path: "cashMin", label: "ADMIN_F_CASH_MIN", min: 0, max: 1_000_000, unit: "$" },
             { widget: "number", path: "cashMax", label: "ADMIN_F_CASH_MAX", min: 0, max: 1_000_000, unit: "$" },
-            { widget: "text", path: "reward", label: "ADMIN_F_REWARD", hint: "ADMIN_H_REWARD", placeholder: "ADMIN_P_REWARD" },
+            { widget: "text", lookup: "item", path: "reward", label: "ADMIN_F_REWARD", hint: "ADMIN_H_REWARD", placeholder: "ADMIN_P_REWARD" },
             { widget: "number", path: "rewardMin", label: "ADMIN_F_REWARD_MIN", min: 0, max: 100 },
             { widget: "number", path: "rewardMax", label: "ADMIN_F_REWARD_MAX", min: 0, max: 100 },
           ],
@@ -174,8 +174,8 @@ export const robberiesSchema: PanelSchema = {
           title: "ADMIN_C_SETTINGS",
           desc: "ADMIN_C_SETTINGS_DESC",
           fields: [
-            { widget: "tags", path: "policeJobs", label: "ADMIN_F_POLICE_JOBS", hint: "ADMIN_H_POLICE_JOBS", placeholder: "ADMIN_P_POLICE_JOBS" },
-            { widget: "text", path: "account", label: "ADMIN_F_ACCOUNT", hint: "ADMIN_H_ACCOUNT", placeholder: "ADMIN_P_ACCOUNT" },
+            { widget: "tags", lookup: "job", path: "policeJobs", label: "ADMIN_F_POLICE_JOBS", hint: "ADMIN_H_POLICE_JOBS", placeholder: "ADMIN_P_POLICE_JOBS" },
+            { widget: "text", lookup: "account", path: "account", label: "ADMIN_F_ACCOUNT", hint: "ADMIN_H_ACCOUNT", placeholder: "ADMIN_P_ACCOUNT" },
           ],
         },
         {
