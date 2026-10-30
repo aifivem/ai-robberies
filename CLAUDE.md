@@ -4,12 +4,13 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 
 ## Decisions
 
-- Two-step timed action: `start` checks everything and hands a token, the client runs the progress, `finish` checks the time (80%) and distance again before paying.
+- Two-step timed action through lib `PendingActions` (robberies and the truck's plant / loot): `start` checks everything and hands a token, the client runs the progress, `finish` checks the token, the time (80%) and distance again before paying. A wrong token never cancels the running action. Who works on a target is a claim (`busy`) that counts only while that player's run is still pending.
 - A robbed target is the GlobalState key `rob:<targetId>` (true while empty) cleared by a server timer after the place's cooldown; at resource start every key is reset.
 - A door target without an ai-doorlock id swings its vault map object on every client near it (`resource/client/vaults.ts`), driven by the same GlobalState key.
 - The police alert goes once per place per cooldown, on the first target of a visit.
-- Houses: routing bucket 7000 + n per house (`resource/server/houses.ts`); the house a character is in is ai-core metadata `robbery_house` and a rejoin puts them at the door. Targets of a house other than its entry only work and show for players inside it.
-- Armored truck (`resource/server/truck.ts`): stockade from lib `spawnVehicle` (no keys) and server-created guard peds (orphan mode 2), guards get `TaskCombatPed` from the server once a player is within 40 m; the rear doors are `SetVehicleDoorBroken` on the server after the fuse.
+- Houses (`resource/server/houses.ts`): a routing bucket from lib `buckets` per occupied house (taken by the first robber, given back by the last; players go back to bucket 0 on resource stop). The server switches the bucket and sends `inside(id, to)`; the client teleports with `player.teleport` (fade and collision, the entry after a break-in too). The house a character is in is ai-core metadata `robbery_house`; `onCharacter` `loaded` (rejoin and the replay after a restart) puts them at the door. Targets of a house other than its entry only work and show for players inside it.
+- Armored truck (`resource/server/truck.ts`): truck from lib `spawnVehicle` (`locked`, no keys) and server-created guard peds (orphan mode 2), guards get `TaskCombatPed` from the server once a player is within 40 m; the rear doors are `SetVehicleDoorBroken` on the server after the fuse. A guard whose entity does not appear in time is kept as a stray and deleted once it shows up or at the end. Models, guard weapon, lifetime, plant / fuse / loot seconds and the job price account are panel settings (`settings.truck`).
+- Police counts come from lib `online.onDutyFor`; the places' blip look is the panel setting `settings.blip`.
 
 ## Contracts
 

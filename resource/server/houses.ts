@@ -1,68 +1,93 @@
-import { onClientCallback } from "@aicore-fivem/lib/server";
-import { CORE } from "@aicore-fivem/shared";
+import {
+  buckets,
+  isNear,
+  onCharacter,
+  onClientCallback,
+} from "@aicore-fivem/lib/server";
+import { fail, type Vec4 } from "@aicore-fivem/lib/shared";
+import { ResourceName } from "common";
 import { EVENTS, INSIDE_META, type Place } from "common/robbery";
-import { content, core, fail } from "./content";
+import { content, core } from "./content";
 
 /**
- * Robbers inside houses. Each house is its own routing bucket (7000 + n; ai-properties uses 5000+, ai-core 50000+),
- * so two houses sharing an interior never meet; the house is also the character's metadata for a rejoin.
+ * Robbers inside houses. Each occupied house is its own routing bucket from lib `buckets` (taken when the first robber
+ * enters, given back when the last one leaves), so two houses sharing an interior never meet; the house is also the
+ * character's metadata for a rejoin. The server switches the bucket, the client teleports (`inside` event).
  */
 class Houses {
   private readonly inside = new Map<number, string>();
-  private readonly buckets = new Map<string, number>();
-
-  private bucketOf(id: string): number {
-    let bucket = this.buckets.get(id);
-    if (bucket === undefined) {
-      bucket = 7000 + this.buckets.size;
-      this.buckets.set(id, bucket);
-      SetRoutingBucketPopulationEnabled(bucket, false);
-      SetRoutingBucketEntityLockdownMode(bucket, "strict");
-    }
-    return bucket;
-  }
+  private readonly worlds = new Map<
+    string,
+    { bucket: number; count: number }
+  >();
 
   insideOf(source: number): string | undefined {
     return this.inside.get(source);
   }
 
-  private move(
-    source: number,
-    at: { x: number; y: number; z: number; heading: number },
-    bucket: number,
-    id: string | null,
-  ): void {
-    const ped = GetPlayerPed(String(source));
-    SetPlayerRoutingBucket(String(source), bucket);
-    SetEntityCoords(ped, at.x, at.y, at.z, false, false, false, false);
-    SetEntityHeading(ped, at.heading);
+  private move(source: number, at: Vec4, id: string | null): void {
+    const previous = this.inside.get(source);
+    if (previous !== id) {
+      if (previous) this.leave(previous);
+      if (id) this.join(id);
+    }
     if (id) this.inside.set(source, id);
     else this.inside.delete(source);
+    SetPlayerRoutingBucket(
+      String(source),
+      id ? (this.worlds.get(id)?.bucket ?? 0) : 0,
+    );
     core.SetMeta(source, INSIDE_META, id);
-    emitNet(EVENTS.inside, source, id);
+    emitNet(EVENTS.inside, source, id, at);
+  }
+
+  private join(id: string): void {
+    const world = this.worlds.get(id);
+    if (world) world.count++;
+    else
+      this.worlds.set(id, {
+        bucket: buckets.acquire(`robbery:${id}`),
+        count: 1,
+      });
+  }
+
+  private leave(id: string): void {
+    const world = this.worlds.get(id);
+    if (!world || --world.count > 0) return;
+    this.worlds.delete(id);
+    buckets.release(world.bucket);
   }
 
   enter(source: number, place: Place): void {
-    if (place.interior)
-      this.move(source, place.interior, this.bucketOf(place.id), place.id);
+    if (place.interior) this.move(source, place.interior, place.id);
   }
 
   exit(source: number): boolean {
     const place = content.places.get(this.inside.get(source) ?? "");
     if (!place) return false;
-    this.move(source, { ...place.coords, heading: 0 }, 0, null);
+    this.move(source, { ...place.coords, heading: 0 }, null);
     return true;
   }
 
-  /** A character that left the game inside a house comes back at its door. */
+  /** A character that left the game inside a house (or was inside at a restart) comes back at its door. */
   rejoin(source: number): void {
     const id = core.GetMeta(source, INSIDE_META);
     const place = typeof id === "string" ? content.places.get(id) : undefined;
-    if (place) this.move(source, { ...place.coords, heading: 0 }, 0, null);
+    if (place) this.move(source, { ...place.coords, heading: 0 }, null);
   }
 
-  drop(source: number): void {
+  /** The player is gone (drop, logout); the metadata stays for the rejoin. */
+  forget(source: number): void {
+    const id = this.inside.get(source);
+    if (id === undefined) return;
     this.inside.delete(source);
+    this.leave(id);
+  }
+
+  /** Back to the shared world before ai-core takes the buckets back. */
+  stop(): void {
+    for (const source of this.inside.keys())
+      SetPlayerRoutingBucket(String(source), 0);
   }
 }
 
@@ -72,19 +97,16 @@ onClientCallback(
   EVENTS.exit,
   (source) => {
     const place = content.places.get(houses.insideOf(source) ?? "");
-    if (!place?.interior) return fail("ROB_ERR_FAR");
-    const [x = 0, y = 0, z = 0] = GetEntityCoords(GetPlayerPed(String(source)));
-    if (
-      Math.hypot(
-        x - place.interior.x,
-        y - place.interior.y,
-        z - place.interior.z,
-      ) > 3
-    )
+    if (!place?.interior || !isNear(source, place.interior, 3))
       return fail("ROB_ERR_FAR");
     return houses.exit(source) ? { ok: true } : fail("ROB_ERR_FAR");
   },
   { lock: true },
 );
-on(CORE.playerLoadedEvent, (source: number) => houses.rejoin(source));
-on("playerDropped", () => houses.drop(Number(globalThis.source)));
+onCharacter({
+  loaded: (source) => houses.rejoin(source),
+  unloaded: (source) => houses.forget(source),
+});
+on("onResourceStop", (resource: string) => {
+  if (resource === ResourceName) houses.stop();
+});

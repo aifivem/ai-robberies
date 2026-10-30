@@ -24,9 +24,83 @@
       "minLength": 2,
       "maxLength": 32
     },
+    "blip": {
+      "description": "Place blip: How places with the map switch on look on the map.",
+      "type": "object",
+      "properties": {
+        "sprite": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "color": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 0.3,
+          "maximum": 2
+        }
+      },
+      "required": [
+        "sprite",
+        "color",
+        "scale"
+      ]
+    },
     "truck": {
       "type": "object",
       "properties": {
+        "account": {
+          "description": "Job price account: The account the job price is taken from.",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 32
+        },
+        "truckModel": {
+          "description": "Truck model",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "guardModel": {
+          "description": "Guard model",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "guardWeapon": {
+          "description": "Guard weapon: Weapon name the guards carry.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "lifetime": {
+          "description": "Truck lifetime: An unrobbed truck goes away after this time.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        "plantSeconds": {
+          "description": "Planting time",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "fuseSeconds": {
+          "description": "Fuse: Time between planting the charge and the doors blowing.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "lootSeconds": {
+          "description": "Looting time",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
         "giver": {
           "description": "Job giver: Where robbers ask for the job. Leave at 0, 0, 0 to turn trucks off.",
           "type": "object",
@@ -52,7 +126,7 @@
           }
         },
         "price": {
-          "description": "Job price: Taken from the bank.",
+          "description": "Job price: Taken from the job account below.",
           "type": "integer",
           "minimum": 0,
           "maximum": 1000000

@@ -1,15 +1,15 @@
 import {
+  callAction,
   createBlip,
   notify,
   onServerEvent,
   Points,
   progress,
-  triggerServerCallback,
 } from "@aicore-fivem/lib/client";
-import { record } from "@aicore-fivem/lib/shared";
+import { oneArg, readFinite, readId } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS } from "common/robbery";
-import { content, errorText, world } from "./content";
+import { content, FALLBACK, world } from "./content";
 
 /**
  * The armored truck job on this client: the giver's point, a route blip to the truck the server spawned, and a
@@ -82,31 +82,27 @@ class TruckJob {
   }
 
   async start(): Promise<void> {
-    const result = record(
-      await triggerServerCallback(EVENTS.truckStart, [], 15_000).catch(
-        () => null,
-      ),
-    );
-    if (result.ok !== true)
-      return notify(errorText(result, "ROB_ERR_FAR"), "error");
-    notify(Locale("ROB_TRUCK_STARTED"), "info", 8000);
+    const ok = await callAction(EVENTS.truckStart, [], {
+      ...FALLBACK,
+      timeout: 15_000,
+    });
+    if (ok) notify(Locale("ROB_TRUCK_STARTED"), "info", 8000);
   }
 
   /** Plant or loot, whichever the doors allow now: two-step timed action. */
   async rear(): Promise<void> {
     const loot = this.open;
-    const started = record(
-      await triggerServerCallback(
-        loot ? EVENTS.truckLoot : EVENTS.truckPlant,
-        [],
-      ).catch(() => null),
+    const started = await callAction(
+      loot ? EVENTS.truckLoot : EVENTS.truckPlant,
+      [],
+      FALLBACK,
     );
     if (
-      started.ok !== true ||
+      !started ||
       typeof started.token !== "number" ||
       typeof started.seconds !== "number"
     )
-      return notify(errorText(started, "ROB_ERR_FAR"), "error");
+      return;
     const anim = loot
       ? { dict: "anim@heists@ornate_bank@grab_cash", clip: "grab" }
       : {
@@ -119,13 +115,11 @@ class TruckJob {
       anim,
     });
     if (!done) return;
-    const result = record(
-      await triggerServerCallback(
-        loot ? EVENTS.truckLooted : EVENTS.truckPlanted,
-        [started.token],
-      ).catch(() => null),
+    await callAction(
+      loot ? EVENTS.truckLooted : EVENTS.truckPlanted,
+      [started.token],
+      FALLBACK,
     );
-    if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
   }
 }
 
@@ -136,21 +130,20 @@ world.onChange("settings", () => truck.rebuildGiver());
 onServerEvent(
   EVENTS.truckJob,
   {
-    args: ([netId, x, y, z]): [number, number, number, number] | null =>
-      typeof netId === "number" &&
-      typeof x === "number" &&
-      typeof y === "number" &&
-      typeof z === "number"
-        ? [netId, x, y, z]
-        : null,
+    args: ([netId, x, y, z]): [number, number, number, number] | null => {
+      const id = readId(netId);
+      const [px, py, pz] = [readFinite(x), readFinite(y), readFinite(z)];
+      return id !== null && px !== null && py !== null && pz !== null
+        ? [id, px, py, pz]
+        : null;
+    },
   },
   (netId, x, y, z) => truck.job(netId, { x, y, z }),
 );
 onServerEvent(
   EVENTS.truckOpen,
   {
-    args: ([netId]): [number] | null =>
-      typeof netId === "number" ? [netId] : null,
+    args: oneArg(readId),
   },
   (netId) => truck.opened(netId),
 );

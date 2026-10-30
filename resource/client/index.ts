@@ -1,16 +1,16 @@
 import {
   Blips,
+  callAction,
   fadeOut,
-  notify,
   onServerEvent,
+  player,
   Points,
   progress,
-  triggerServerCallback,
 } from "@aicore-fivem/lib/client";
-import { record, sleep } from "@aicore-fivem/lib/shared";
+import { isRecord, vec4, type Vec4 } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { ANIMS, EVENTS, readPlaces, readTargets } from "common/robbery";
-import { content, errorText, world } from "./content";
+import { ANIMS, EVENTS } from "common/robbery";
+import { content, FALLBACK, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
 
@@ -62,49 +62,34 @@ class Spots {
     for (const place of content.places.values())
       if (place.blip)
         this.blips.add(place.id, {
+          ...content.settings.blip,
           coords: place.coords,
           label: place.label,
-          sprite: 500,
-          color: 0,
-          scale: 0.7,
         });
   }
 
   async rob(id: string): Promise<void> {
     const target = content.targets.get(id);
     if (!target) return;
-    const started = record(
-      await triggerServerCallback(EVENTS.start, [id]).catch(() => null),
-    );
-    if (started.entered === true) return;
+    const started = await callAction(EVENTS.start, [id], FALLBACK);
+    if (!started || started.entered === true) return;
     if (
-      started.ok !== true ||
       typeof started.token !== "number" ||
       typeof started.seconds !== "number"
     )
-      return notify(errorText(started, "ROB_ERR_FAR"), "error");
+      return;
     const done = await progress({
       label: Locale("ROB_WORKING"),
       duration: started.seconds * 1000,
       anim: ANIMS[target.kind],
     });
-    if (!done) return;
-    const result = record(
-      await triggerServerCallback(EVENTS.finish, [started.token]).catch(
-        () => null,
-      ),
-    );
-    if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
+    if (done) await callAction(EVENTS.finish, [started.token], FALLBACK);
   }
 
+  /** The screen goes black first; the server's `inside` event teleports and lifts the fade. */
   async exit(): Promise<void> {
     await fadeOut();
-    const result = record(
-      await triggerServerCallback(EVENTS.exit, []).catch(() => null),
-    );
-    if (result.ok !== true) notify(errorText(result, "ROB_ERR_FAR"), "error");
-    await sleep(400);
-    DoScreenFadeIn(300);
+    if (!(await callAction(EVENTS.exit, [], FALLBACK))) DoScreenFadeIn(300);
   }
 }
 
@@ -116,24 +101,25 @@ robbed.onChange((id, value) => {
   vaults.changed(id, value === true);
   spots.points.refresh();
 });
-world.onChange("places", () => {
-  content.places = readPlaces(world.get("places"));
-  spots.rebuild();
-});
+world.onChange("places", () => spots.rebuild());
+world.onChange("settings", () => spots.rebuild());
 world.onChange("targets", () => {
-  content.targets = readTargets(world.get("targets"));
   spots.rebuild();
   vaults.rebuild(content.targets.values());
 });
 
+const NOWHERE: Vec4 = { x: 0, y: 0, z: 0, heading: 0 };
 onServerEvent(
   EVENTS.inside,
   {
-    args: ([id]): [string | null] | null =>
-      id == null ? [null] : typeof id === "string" ? [id] : null,
+    args: ([id, to]): [string | null, Vec4] | null =>
+      (id == null || typeof id === "string") && isRecord(to)
+        ? [id ?? null, vec4(to, NOWHERE)]
+        : null,
   },
-  (id) => {
+  (id, to) => {
     spots.insideId = id;
     spots.rebuild();
+    void player.teleport(to, { heading: to.heading });
   },
 );

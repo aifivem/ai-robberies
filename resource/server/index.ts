@@ -4,15 +4,17 @@ import {
   dispatch,
   GlobalGroup,
   inventory,
+  isNear,
   notify,
   onClientCallback,
   optionalExport,
+  PendingActions,
   stateBoolean,
 } from "@aicore-fivem/lib/server";
-import { asArgs } from "@aicore-fivem/lib/shared";
+import { fail, oneArg, readId, readText } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS, ROBBED_PREFIX, type Target } from "common/robbery";
-import { content, core, fail, near, policeOnDuty, random } from "./content";
+import { content, core, policeOnDuty, random } from "./content";
 import { houses } from "./houses";
 import "./truck";
 
@@ -25,50 +27,42 @@ const UNARMED = GetHashKey("WEAPON_UNARMED");
 for (const id of content.targets.keys())
   if (robbed.get(id) === true) robbed.set(id, false);
 
-/** Robberies in progress (one per player, one player per target) and the police alerts already sent per place. */
+/**
+ * Robberies in progress (lib `PendingActions`: one per player, token, 80% of the time, freed on drop), who works on
+ * which target, and the police alerts already sent per place.
+ */
 class Robberies {
-  private readonly runs = new Map<
-    number,
-    { token: number; target: Target; startedAt: number }
-  >();
-  private readonly busy = new Map<string, number>();
+  private readonly runs = new PendingActions<Target>();
+  /** targetId -> the player on it and until when the claim holds. */
+  private readonly busy = new Map<string, { source: number; until: number }>();
   private readonly alerted = new Map<string, number>();
-  private nextToken = 0;
 
   start(source: number, target: Target): number {
-    this.drop(source);
-    const token = ++this.nextToken;
-    this.runs.set(source, { token, target, startedAt: Date.now() });
-    this.busy.set(target.id, source);
-    return token;
+    this.busy.set(target.id, {
+      source,
+      until: GetGameTimer() + target.seconds * 2000 + 15_000,
+    });
+    return this.runs.start(source, target, target.seconds * 1000);
   }
 
-  /** The target is being robbed by someone else whose run is still within its time. */
+  /** The target is being robbed by someone else whose run is still running and within its time. */
   taken(target: Target, source: number): boolean {
-    const by = this.busy.get(target.id);
-    if (by === undefined || by === source) return false;
-    const run = this.runs.get(by);
+    const claim = this.busy.get(target.id);
+    if (!claim || claim.source === source) return false;
     return (
-      run !== undefined &&
-      Date.now() - run.startedAt < target.seconds * 2000 + 15_000
+      GetGameTimer() < claim.until &&
+      this.runs.peek(claim.source)?.id === target.id
     );
   }
 
-  take(
-    source: number,
-    token: number,
-  ): { target: Target; startedAt: number } | null {
-    const run = this.runs.get(source);
-    if (!run || run.token !== token) return null;
-    this.drop(source);
-    return run;
-  }
-
-  drop(source: number): void {
-    const run = this.runs.get(source);
-    if (run && this.busy.get(run.target.id) === source)
-      this.busy.delete(run.target.id);
-    this.runs.delete(source);
+  /** The player's run for this token when enough time passed; frees the target either way. */
+  take(source: number, token: number): Target | null {
+    const target = this.runs.peek(source);
+    const done = this.runs.take(source, token);
+    if (target && this.runs.peek(source) === null)
+      if (this.busy.get(target.id)?.source === source)
+        this.busy.delete(target.id);
+    return done;
   }
 
   /** True the first time per place cooldown window. */
@@ -83,12 +77,12 @@ const robberies = new Robberies();
 
 onClientCallback(
   EVENTS.start,
-  { args: ([id]) => asArgs(typeof id === "string" ? id : null), lock: true },
+  { args: oneArg((v) => readText(v, 64)), lock: true },
   (source, id) => {
     const target = content.targets.get(id);
     const place = target ? content.places.get(target.place) : undefined;
     if (!target || !place) return fail("ROB_ERR_FAR");
-    if (!near(source, target.coords, 2.5)) return fail("ROB_ERR_FAR");
+    if (!isNear(source, target.coords, 2.5)) return fail("ROB_ERR_FAR");
     // Inside a house only its own targets count; a house broken into stays open until its cooldown ends.
     if (
       place.interior &&
@@ -131,21 +125,12 @@ onClientCallback(
 
 onClientCallback(
   EVENTS.finish,
-  {
-    args: ([token]) => asArgs(typeof token === "number" ? token : null),
-    lock: true,
-  },
+  { args: oneArg(readId), lock: true },
   (source, token) => {
-    const run = robberies.take(source, token);
-    if (!run) return fail("ROB_ERR_FAR");
-    const { target } = run;
+    const target = robberies.take(source, token);
+    if (!target) return fail("ROB_ERR_FAR");
     const place = content.places.get(target.place);
-    if (
-      !place ||
-      Date.now() - run.startedAt < target.seconds * 800 ||
-      !near(source, target.coords, 3)
-    )
-      return fail("ROB_ERR_FAR");
+    if (!place || !isNear(source, target.coords, 3)) return fail("ROB_ERR_FAR");
     if (robbed.get(target.id) === true) return fail("ROB_ERR_EMPTY");
     if (
       target.item &&
@@ -186,5 +171,3 @@ onClientCallback(
     return { ok: true };
   },
 );
-
-on("playerDropped", () => robberies.drop(Number(globalThis.source)));

@@ -1,48 +1,24 @@
-import { AdminPanel, resourceExport } from "@aicore-fivem/lib/server";
-import { readPlaces, readSettings, readTargets } from "common/robbery";
+import { AdminPanel, online, resourceExport } from "@aicore-fivem/lib/server";
+import { readPlace, readSettings, readTarget } from "common/robbery";
 import { robberiesSchema } from "./schema";
 
 export const core = resourceExport("ai-core");
 export const panel = new AdminPanel(robberiesSchema);
-/** Panel content, parsed again after every change. */
+const settings = panel.view("settings", readSettings);
+/** Panel content, kept current by the panel's views. */
 export const content = {
-  settings: readSettings(panel.get("settings")),
-  places: readPlaces(panel.get("places")),
-  targets: readTargets(panel.get("targets")),
+  get settings() {
+    return settings.value;
+  },
+  places: panel.records("places", readPlace),
+  targets: panel.records("targets", readTarget),
 };
-panel.onChange(
-  "settings",
-  () => (content.settings = readSettings(panel.get("settings"))),
-);
-panel.onChange(
-  "places",
-  () => (content.places = readPlaces(panel.get("places"))),
-);
-panel.onChange(
-  "targets",
-  () => (content.targets = readTargets(panel.get("targets"))),
-);
 
-export const fail = (error: string) => ({ ok: false as const, error });
 export const random = (min: number, max: number) =>
   min + Math.floor(Math.random() * (max - min + 1));
 
-export function pos(source: number): { x: number; y: number; z: number } {
-  const [x = 0, y = 0, z = 0] = GetEntityCoords(GetPlayerPed(String(source)));
-  return { x, y, z };
-}
-
-export const distance = (
-  a: { x: number; y: number; z: number },
-  b: { x: number; y: number; z: number },
-) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-export const near = (
-  source: number,
-  at: { x: number; y: number; z: number },
-  metres: number,
-) => distance(pos(source), at) <= metres;
 export const policeOnDuty = () =>
   content.settings.policeJobs.reduce(
-    (sum, job) => sum + core.GetOnDutyCount(job),
+    (sum, job) => sum + online.onDutyFor(job).size,
     0,
   );

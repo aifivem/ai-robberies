@@ -1,23 +1,15 @@
-import { AdminWorld, loadLocaleTexts } from "@aicore-fivem/lib/client";
-import { record } from "@aicore-fivem/lib/shared";
-import { readPlaces, readSettings, readTargets } from "common/robbery";
+import { AdminWorld } from "@aicore-fivem/lib/client";
+import { readPlace, readSettings, readTarget } from "common/robbery";
 
-/** The panel files every client module reads, parsed again after each change. */
+/** The panel files every client module reads, kept current by the panel's views. */
 export const world = new AdminWorld(["settings", "places", "targets"]);
+const settings = world.view("settings", readSettings);
 export const content = {
-  settings: readSettings(world.get("settings")),
-  places: readPlaces(world.get("places")),
-  targets: readTargets(world.get("targets")),
+  get settings() {
+    return settings.value;
+  },
+  places: world.records("places", readPlace),
+  targets: world.records("targets", readTarget),
 };
-world.onChange(
-  "settings",
-  () => (content.settings = readSettings(world.get("settings"))),
-);
 
-const texts = loadLocaleTexts();
-/** The translated error of a callback answer. */
-export const errorText = (v: unknown, fallback: string): string => {
-  const key =
-    typeof record(v).error === "string" ? String(record(v).error) : fallback;
-  return texts[key] ?? key;
-};
+export const FALLBACK = { fallback: "ROB_ERR_FAR" };

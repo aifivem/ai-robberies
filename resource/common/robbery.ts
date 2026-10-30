@@ -17,7 +17,7 @@ export const EVENTS = {
   finish: "ai-robberies:finish",
   /** Callback: () -> { ok } leaves the house the player is inside. */
   exit: "ai-robberies:exit",
-  /** Server -> player: (placeId | null) the player is inside this house now (or left). */
+  /** Server -> player: (placeId | null, to: Vec4) the player is inside this house now (or left): teleport to `to`. */
   inside: "ai-robberies:client:inside",
   /** Callback: () -> { ok } pays for an armored truck job at the giver. */
   truckStart: "ai-robberies:truckStart",
@@ -84,11 +84,29 @@ export interface TruckSettings {
   cashMin: number;
   cashMax: number;
   spawns: Vec4[];
+  /** Account the job price is taken from. */
+  account: string;
+  truckModel: string;
+  guardModel: string;
+  guardWeapon: string;
+  /** Minutes before an unrobbed truck goes away. */
+  lifetime: number;
+  plantSeconds: number;
+  fuseSeconds: number;
+  lootSeconds: number;
+}
+
+export interface BlipStyle {
+  sprite: number;
+  color: number;
+  scale: number;
 }
 
 export interface Settings {
   policeJobs: string[];
   account: string;
+  /** Map blip of places with the map switch on. */
+  blip: BlipStyle;
   truck: TruckSettings;
 }
 
@@ -99,9 +117,15 @@ export function readSettings(raw: unknown): Settings {
     : [];
   const t = record(v.truck);
   const cashMin = int(t.cashMin, 2000, 0);
+  const blip = record(v.blip);
   return {
     policeJobs: jobs.length > 0 ? jobs : ["police"],
     account: str(v.account, "cash", 32),
+    blip: {
+      sprite: int(blip.sprite, 500, 0, 1000),
+      color: int(blip.color, 0, 0, 100),
+      scale: num(blip.scale, 0.7, 0.3, 2),
+    },
     truck: {
       giver: vec4(t.giver, ZERO4),
       price: int(t.price, 500, 0),
@@ -113,6 +137,14 @@ export function readSettings(raw: unknown): Settings {
       spawns: (Array.isArray(t.spawns) ? t.spawns : []).map((row) =>
         vec4(record(row).coords, ZERO4),
       ),
+      account: str(t.account, "bank", 32),
+      truckModel: str(t.truckModel, "stockade", 64),
+      guardModel: str(t.guardModel, "s_m_m_security_01", 64),
+      guardWeapon: str(t.guardWeapon, "WEAPON_CARBINERIFLE", 64),
+      lifetime: int(t.lifetime, 20, 1, 240),
+      plantSeconds: int(t.plantSeconds, 5, 1, 120),
+      fuseSeconds: int(t.fuseSeconds, 10, 1, 120),
+      lootSeconds: int(t.lootSeconds, 10, 1, 120),
     },
   };
 }
@@ -132,22 +164,18 @@ export interface Place {
   interior: Vec4 | null;
 }
 
-export function readPlaces(raw: unknown): Map<string, Place> {
-  const out = new Map<string, Place>();
-  for (const [id, value] of Object.entries(record(raw))) {
-    const v = record(value);
-    out.set(id, {
-      id,
-      label: str(v.label, id, 48),
-      coords: point(v.coords),
-      minPolice: int(v.minPolice, 0, 0, 32),
-      cooldown: int(v.cooldown, 30, 1, 1440),
-      alertChance: int(v.alertChance, 100, 0, 100),
-      blip: bool(v.blip, false),
-      interior: optional4(v.interior),
-    });
-  }
-  return out;
+/** One place record (`panel.records` / `world.records`). */
+export function readPlace(id: string, v: Record<string, unknown>): Place {
+  return {
+    id,
+    label: str(v.label, id, 48),
+    coords: point(v.coords),
+    minPolice: int(v.minPolice, 0, 0, 32),
+    cooldown: int(v.cooldown, 30, 1, 1440),
+    alertChance: int(v.alertChance, 100, 0, 100),
+    blip: bool(v.blip, false),
+    interior: optional4(v.interior),
+  };
 }
 
 export interface Target {
@@ -174,35 +202,31 @@ export interface Target {
   vaultOpen: number;
 }
 
-export function readTargets(raw: unknown): Map<string, Target> {
-  const out = new Map<string, Target>();
-  for (const [id, value] of Object.entries(record(raw))) {
-    const v = record(value);
-    const cashMin = int(v.cashMin, 0, 0, 1_000_000);
-    const rewardMin = int(v.rewardMin, 0, 0, 100);
-    out.set(id, {
-      id,
-      place: str(v.place, "", 48),
-      label: str(v.label, id, 48),
-      kind: KINDS.includes(v.kind as TargetKind)
-        ? (v.kind as TargetKind)
-        : "register",
-      coords: point(v.coords),
-      item: str(v.item, "", 48),
-      consume: bool(v.consume, false),
-      seconds: int(v.seconds, 20, 1, 600),
-      cashMin,
-      cashMax: Math.max(cashMin, int(v.cashMax, 0, 0, 1_000_000)),
-      reward: str(v.reward, "", 48),
-      rewardMin,
-      rewardMax: Math.max(rewardMin, int(v.rewardMax, 0, 0, 100)),
-      door: str(v.door, "", 64),
-      vaultModel: str(v.vaultModel, "", 64),
-      vaultClosed: num(v.vaultClosed, 0, -720, 720),
-      vaultOpen: num(v.vaultOpen, 0, -720, 720),
-    });
-  }
-  return out;
+/** One target record (`panel.records` / `world.records`). */
+export function readTarget(id: string, v: Record<string, unknown>): Target {
+  const cashMin = int(v.cashMin, 0, 0, 1_000_000);
+  const rewardMin = int(v.rewardMin, 0, 0, 100);
+  return {
+    id,
+    place: str(v.place, "", 48),
+    label: str(v.label, id, 48),
+    kind: KINDS.includes(v.kind as TargetKind)
+      ? (v.kind as TargetKind)
+      : "register",
+    coords: point(v.coords),
+    item: str(v.item, "", 48),
+    consume: bool(v.consume, false),
+    seconds: int(v.seconds, 20, 1, 600),
+    cashMin,
+    cashMax: Math.max(cashMin, int(v.cashMax, 0, 0, 1_000_000)),
+    reward: str(v.reward, "", 48),
+    rewardMin,
+    rewardMax: Math.max(rewardMin, int(v.rewardMax, 0, 0, 100)),
+    door: str(v.door, "", 64),
+    vaultModel: str(v.vaultModel, "", 64),
+    vaultClosed: num(v.vaultClosed, 0, -720, 720),
+    vaultOpen: num(v.vaultOpen, 0, -720, 720),
+  };
 }
 
 /** The animation each kind plays during its progress. */
