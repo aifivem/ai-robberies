@@ -2,6 +2,7 @@ import {
   aiLog,
   coordsOf,
   dispatch,
+  every,
   inventory,
   isNear,
   notify,
@@ -39,7 +40,10 @@ class Truck {
   private open = false;
   private looted = false;
   private nextAllowed = 0;
-  private watcher: ReturnType<typeof setInterval> | null = null;
+  private readonly watcher = every(2000, () => this.guard(), {
+    active: false,
+    name: "truckGuards",
+  });
   private ender: ReturnType<typeof setTimeout> | null = null;
   /** Plant / loot progress per player (lib `PendingActions`: token, 80% of the time, freed on drop). */
   private readonly runs = new PendingActions<Step>();
@@ -92,7 +96,7 @@ class Truck {
       SetPedArmour(guard, 100);
       this.guards.push(guard);
     }
-    this.watcher = setInterval(() => this.guard(), 2000);
+    this.watcher.set(true);
     this.ender = setTimeout(() => this.end(), s.lifetime * 60_000);
     this.tell(source, true);
     return true;
@@ -184,9 +188,8 @@ class Truck {
   }
 
   end(): void {
-    if (this.watcher) clearInterval(this.watcher);
+    this.watcher.set(false);
     if (this.ender) clearTimeout(this.ender);
-    this.watcher = null;
     this.ender = null;
     for (const entity of [this.vehicle, ...this.guards, ...this.strays])
       if (entity && DoesEntityExist(entity)) DeleteEntity(entity);

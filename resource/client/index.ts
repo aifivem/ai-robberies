@@ -1,6 +1,7 @@
 import {
   Blips,
   callAction,
+  fadeIn,
   fadeOut,
   onServerEvent,
   player,
@@ -89,7 +90,7 @@ class Spots {
   /** The screen goes black first; the server's `inside` event teleports and lifts the fade. */
   async exit(): Promise<void> {
     await fadeOut();
-    if (!(await callAction(EVENTS.exit, [], FALLBACK))) DoScreenFadeIn(300);
+    if (!(await callAction(EVENTS.exit, [], FALLBACK))) await fadeIn(300);
   }
 }
 
