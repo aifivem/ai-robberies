@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ai-robberies/data/targets.json",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's JSON Schema (for editors)."
+    }
+  },
+  "patternProperties": {
+    "^[a-z0-9_]{2,64}$": {
+      "type": "object",
+      "properties": {
+        "place": {
+          "description": "Place: The id of the place this target belongs to.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "label": {
+          "description": "Name",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "kind": {
+          "description": "Kind: Decides the animation. Vitrines need a weapon in hand; doors open instead of paying; a house door breaks in (the place needs an interior).",
+          "enum": [
+            "register",
+            "safe",
+            "locker",
+            "vitrine",
+            "door",
+            "entry",
+            "loot"
+          ]
+        },
+        "coords": {
+          "description": "Spot: The robber must stand within 2.5 m of it.",
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          }
+        },
+        "item": {
+          "description": "Needed tool: Item the robber must carry. Empty: none.",
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 48
+        },
+        "consume": {
+          "description": "The tool is used up",
+          "type": "boolean"
+        },
+        "seconds": {
+          "description": "Duration",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "cashMin": {
+          "description": "Money from",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "cashMax": {
+          "description": "Money up to",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "reward": {
+          "description": "Item: Item given with the money. Empty: none.",
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 48
+        },
+        "rewardMin": {
+          "description": "Items from",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "rewardMax": {
+          "description": "Items up to",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "door": {
+          "description": "Doorlock door: The id of a door in ai-doorlock. Empty: the vault object below swings instead.",
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "vaultModel": {
+          "description": "Vault model: A map object within 6 m of the spot, turned locally on every client.",
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "vaultClosed": {
+          "description": "Closed heading",
+          "type": "number",
+          "minimum": -720,
+          "maximum": 720
+        },
+        "vaultOpen": {
+          "description": "Open heading",
+          "type": "number",
+          "minimum": -720,
+          "maximum": 720
+        }
+      },
+      "required": [
+        "place",
+        "label",
+        "kind",
+        "coords",
+        "item",
+        "consume",
+        "seconds",
+        "cashMin",
+        "cashMax",
+        "reward",
+        "rewardMin",
+        "rewardMax",
+        "door",
+        "vaultModel",
+        "vaultClosed",
+        "vaultOpen"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

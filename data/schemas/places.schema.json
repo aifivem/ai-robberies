@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ai-robberies/data/places.json",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's JSON Schema (for editors)."
+    }
+  },
+  "patternProperties": {
+    "^[a-z0-9_]{2,32}$": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Name",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "coords": {
+          "description": "Alert point: Where the police alert points to.",
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          }
+        },
+        "minPolice": {
+          "description": "Police needed: On-duty officers needed before anything here can be robbed.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "cooldown": {
+          "description": "Cooldown: How long a robbed target stays empty (and an opened door open).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "alertChance": {
+          "description": "Alert chance: Chance that the first robbery of a visit alerts the police (once per cooldown).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "blip": {
+          "description": "Show on the map",
+          "type": "boolean"
+        },
+        "interior": {
+          "description": "Interior point: Where robbers appear inside (and leave from). Leave at 0, 0, 0 for places that are not houses.",
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z",
+            "heading"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            },
+            "heading": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "required": [
+        "label",
+        "coords",
+        "minPolice",
+        "cooldown",
+        "alertChance",
+        "blip",
+        "interior"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

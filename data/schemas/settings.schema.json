@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ai-robberies/data/settings.json",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's JSON Schema (for editors)."
+    },
+    "policeJobs": {
+      "description": "Police jobs: On-duty members of these jobs count for 'Police needed'.",
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 32,
+        "pattern": "^[a-z0-9_]{2,32}$"
+      }
+    },
+    "account": {
+      "description": "Money account: Stolen money goes to this account of the robber.",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 32
+    },
+    "truck": {
+      "type": "object",
+      "properties": {
+        "giver": {
+          "description": "Job giver: Where robbers ask for the job. Leave at 0, 0, 0 to turn trucks off.",
+          "type": "object",
+          "required": [
+            "x",
+            "y",
+            "z",
+            "heading"
+          ],
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            },
+            "heading": {
+              "type": "number"
+            }
+          }
+        },
+        "price": {
+          "description": "Job price: Taken from the bank.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "minPolice": {
+          "description": "Police needed",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "cooldown": {
+          "description": "Time between trucks",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "item": {
+          "description": "Charge item: Spent to blow the rear doors.",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "cashMin": {
+          "description": "Money from",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "cashMax": {
+          "description": "Money up to",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "spawns": {
+          "description": "Truck spawns",
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "properties": {
+              "coords": {
+                "description": "Spawn",
+                "type": "object",
+                "required": [
+                  "x",
+                  "y",
+                  "z",
+                  "heading"
+                ],
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  },
+                  "heading": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "required": [
+              "coords"
+            ]
+          }
+        }
+      },
+      "required": [
+        "giver",
+        "price",
+        "minPolice",
+        "cooldown",
+        "item",
+        "cashMin",
+        "cashMax",
+        "spawns"
+      ]
+    }
+  },
+  "required": [
+    "policeJobs",
+    "account",
+    "truck"
+  ]
+}

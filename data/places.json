@@ -1,4 +1,5 @@
 {
+  "$schema": "./schemas/places.schema.json",
   "store_1": {
     "label": "Little Seoul 24/7",
     "coords": {

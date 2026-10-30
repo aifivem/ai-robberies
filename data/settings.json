@@ -1,4 +1,5 @@
 {
+  "$schema": "./schemas/settings.schema.json",
   "policeJobs": [
     "police"
   ],
@@ -78,7 +79,7 @@
           "x": 255.49,
           "y": 278.25,
           "z": 105.59,
-          "heading": 67.0
+          "heading": 67
         }
       }
     ]
