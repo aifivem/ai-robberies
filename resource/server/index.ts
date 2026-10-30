@@ -1,4 +1,13 @@
-import { aiLog, aiLogChannels, GlobalGroup, inventory, notify, onClientCallback, optionalExport, stateBoolean } from "@aicore-fivem/lib/server";
+import {
+  aiLog,
+  aiLogChannels,
+  GlobalGroup,
+  inventory,
+  notify,
+  onClientCallback,
+  optionalExport,
+  stateBoolean,
+} from "@aicore-fivem/lib/server";
 import { asArgs } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS, ROBBED_PREFIX, type Target } from "common/robbery";
@@ -133,8 +142,7 @@ onClientCallback(
       !near(source, target.coords, 3)
     )
       return fail("ROB_ERR_FAR");
-    if (robbed.get(target.id) === true)
-      return fail("ROB_ERR_EMPTY");
+    if (robbed.get(target.id) === true) return fail("ROB_ERR_EMPTY");
     if (
       target.item &&
       target.consume &&
@@ -142,10 +150,7 @@ onClientCallback(
     )
       return fail("ROB_ERR_ITEM");
     robbed.set(target.id, true);
-    setTimeout(
-      () => robbed.set(target.id, false),
-      place.cooldown * 60_000,
-    );
+    setTimeout(() => robbed.set(target.id, false), place.cooldown * 60_000);
     if (target.kind === "entry") houses.enter(source, place);
     if (target.kind === "door" && target.door) {
       const doors = optionalExport("ai-doorlock");

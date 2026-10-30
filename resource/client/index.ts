@@ -9,12 +9,7 @@ import {
 } from "@aicore-fivem/lib/client";
 import { record, sleep } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import {
-  ANIMS,
-  EVENTS,
-  readPlaces,
-  readTargets,
-} from "common/robbery";
+import { ANIMS, EVENTS, readPlaces, readTargets } from "common/robbery";
 import { content, errorText, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
@@ -43,7 +38,11 @@ class Spots {
         coords: target.coords,
         radius: 1.2,
         interval: 300,
-        label: () => Locale(robbed.get(id) === true ? "ROB_PROMPT_EMPTY" : "ROB_PROMPT", target.label),
+        label: () =>
+          Locale(
+            robbed.get(id) === true ? "ROB_PROMPT_EMPTY" : "ROB_PROMPT",
+            target.label,
+          ),
         icon: "mask",
         onPressed: () => this.rob(id),
       });
