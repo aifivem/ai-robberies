@@ -1,4 +1,4 @@
-import type { PanelSchema } from "@aicore-fivem/shared"
+import type { PanelSchema } from "@aicore-fivem/shared";
 
 /** ai-robberies' panel: places (store, bank, jewelery), what can be robbed there, and who counts as police. */
 export const robberiesSchema: PanelSchema = {
@@ -457,4 +457,4 @@ export const robberiesSchema: PanelSchema = {
       ],
     },
   ],
-}
+};
