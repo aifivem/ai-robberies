@@ -48,8 +48,13 @@ class Truck {
   /** Plant / loot progress per player (lib `PendingActions`: token, 80% of the time, freed on drop). */
   private readonly runs = new PendingActions<Step>();
 
+  /** True from the start of `spawn` until it settles: a second job cannot start meanwhile (cooldown 0 included). */
+  private starting = false;
+
   get active(): boolean {
-    return this.vehicle !== 0 && DoesEntityExist(this.vehicle);
+    return (
+      this.starting || (this.vehicle !== 0 && DoesEntityExist(this.vehicle))
+    );
   }
 
   get waitMs(): number {
@@ -57,6 +62,15 @@ class Truck {
   }
 
   async spawn(source: number): Promise<boolean> {
+    this.starting = true;
+    try {
+      return await this.create(source);
+    } finally {
+      this.starting = false;
+    }
+  }
+
+  private async create(source: number): Promise<boolean> {
     const s = content.settings.truck;
     const at = s.spawns[random(0, s.spawns.length - 1)];
     if (!at) return false;
