@@ -1099,6 +1099,32 @@ var PlayerMap = class extends Map {
 			this.delete(source), options.onDrop?.(source, value);
 		});
 	}
+}, KeyedCooldowns = class {
+	until = new Map();
+	sweepAt = 64;
+	ready(key) {
+		return this.left(key) === 0;
+	}
+	start(key, ms) {
+		ms <= 0 ? this.until.delete(key) : (this.until.size >= this.sweepAt && this.sweep(), this.until.set(key, GetGameTimer() + ms));
+	}
+	take(key, ms) {
+		return this.ready(key) ? (this.start(key, ms), !0) : !1;
+	}
+	left(key) {
+		let until = this.until.get(key);
+		if (until === void 0) return 0;
+		let left = until - GetGameTimer();
+		return left > 0 ? left : (this.until.delete(key), 0);
+	}
+	clear(key) {
+		this.until.delete(key);
+	}
+	sweep() {
+		let now = GetGameTimer();
+		for (let [key, until] of this.until) until <= now && this.until.delete(key);
+		this.sweepAt = Math.max(64, this.until.size * 2);
+	}
 };
 function onCharacter(handlers) {
 	let live = new Map(), deliver = (source, character) => {
@@ -2477,7 +2503,7 @@ for (let id of content.targets.keys()) robbed.get(id) === !0 && robbed.set(id, !
 const robberies = new class {
 	runs = new PendingActions();
 	busy = new Map();
-	alerted = new Map();
+	alerted = new KeyedCooldowns();
 	start(source, target) {
 		return this.busy.set(target.id, {
 			source,
@@ -2493,7 +2519,7 @@ const robberies = new class {
 		return target && this.runs.peek(source) === null && this.busy.get(target.id)?.source === source && this.busy.delete(target.id), done;
 	}
 	shouldAlert(placeId, minutes) {
-		return (this.alerted.get(placeId) ?? 0) > Date.now() ? !1 : (this.alerted.set(placeId, Date.now() + minutes * 6e4), !0);
+		return this.alerted.take(placeId, minutes * 6e4);
 	}
 }();
 onClientCallback(EVENTS.start, {

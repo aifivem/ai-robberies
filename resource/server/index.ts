@@ -5,6 +5,7 @@ import {
   GlobalGroup,
   inventory,
   isNear,
+  KeyedCooldowns,
   notify,
   onClientCallback,
   optionalExport,
@@ -35,7 +36,7 @@ class Robberies {
   private readonly runs = new PendingActions<Target>();
   /** targetId -> the player on it and until when the claim holds. */
   private readonly busy = new Map<string, { source: number; until: number }>();
-  private readonly alerted = new Map<string, number>();
+  private readonly alerted = new KeyedCooldowns<string>();
 
   start(source: number, target: Target): number {
     this.busy.set(target.id, {
@@ -67,9 +68,7 @@ class Robberies {
 
   /** True the first time per place cooldown window. */
   shouldAlert(placeId: string, minutes: number): boolean {
-    if ((this.alerted.get(placeId) ?? 0) > Date.now()) return false;
-    this.alerted.set(placeId, Date.now() + minutes * 60_000);
-    return true;
+    return this.alerted.take(placeId, minutes * 60_000);
   }
 }
 
