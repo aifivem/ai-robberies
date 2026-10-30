@@ -127,10 +127,16 @@ const CORE = {
 	activeGangChangedEvent: "ai-core:activeGangChanged",
 	/** (src, charIds: number[]) each time a player's character screen loads; an appearance resource answers with portraits. */
 	characterScreenEvent: "ai-core:characterScreen",
+	/** (resource: string | null) the inventory behind ai-core's inventory layer changed (the bridge drops its item cache). */
+	inventoryChangedEvent: "ai-core:inventoryChanged",
+	/** (src, name: string, status: Record<string, number> | null) a player used an item; status = the needs it gives, from inventories that define them. */
+	itemUsedEvent: "ai-core:itemUsed",
 	clientPlayerLoadedEvent: "ai-core:client:playerLoaded",
 	clientPlayerUnloadedEvent: "ai-core:client:playerUnloaded",
 	/** (charId: number, url: string) a portrait image of a character on the character screen (e.g. `https://nui-img/<txd>/<txd>`). */
 	clientCharacterPortraitEvent: "ai-core:client:characterPortrait",
+	/** (charId: number) ai-appearance holds this character's look: ai-core dresses its scene ped with `ApplyCharacterAppearance`. */
+	clientCharacterLookEvent: "ai-core:client:characterLook",
 	/** (resource: string, id: string) the interaction key was pressed while that resource's prompt was on top. */
 	clientPromptPressedEvent: "ai-core:client:promptPressed",
 	/** (key: keyof PlayerCache, value) a cached value of the local player changed (one watcher in ai-core for every resource). */
@@ -152,9 +158,12 @@ const CORE = {
 const ADMIN = {
 	/** ACE every panel action checks: `add_ace group.admin ai.admin allow`. */
 	ace: "ai.admin",
+	/** Callback: (keybinds: KeybindInfo[] the admin's client knows) -> AdminPanelSnapshot[]. */
 	openCallback: "ai-core:admin:open",
 	applyCallback: "ai-core:admin:apply",
 	closeEvent: "ai-core:admin:close",
+	/** Server -> client: () open the panel (the `aiadmin` command, checked on the server). */
+	showEvent: "ai-core:admin:show",
 	/** Server -> admins with the panel open: (delta: AdminDelta). */
 	deltaEvent: "ai-core:admin:delta",
 	/** Server -> client of a world (`sync: "all"`) file: (file, key | null, value). Prefixed with the resource name. */
@@ -308,7 +317,7 @@ const requestEvent = (name) => `aicore:cb:${name}`;
 const responseEvent = (resource) => `aicore:cbr:${resource}`;
 
 // ../../../packages/lib/src/server/gate.ts
-const log$3 = createLogger(GetCurrentResourceName());
+const log$4 = createLogger(GetCurrentResourceName());
 /** Every gate of this resource; one playerDropped listener frees them all (one listener per gate trips Node's limit). */
 const gates = /* @__PURE__ */ new Set();
 on("playerDropped", () => {
@@ -355,13 +364,13 @@ var ClientGate = class {
 		this.lock?.release(source);
 	}
 	refuse(source, reason) {
-		log$3.warn(`${this.name} refused for ${GetPlayerName(String(source))} (${source}): ${reason}`);
+		log$4.warn(`${this.name} refused for ${GetPlayerName(String(source))} (${source}): ${reason}`);
 	}
 };
 
 // ../../../packages/lib/src/server/callback.ts
-const log$2 = createLogger(GetCurrentResourceName());
-const resource$3 = GetCurrentResourceName();
+const log$3 = createLogger(GetCurrentResourceName());
+const resource$4 = GetCurrentResourceName();
 const REFUSED = Symbol("refused");
 function onClientCallback(name, first, second) {
 	const [handler, options] = typeof first === "function" ? [first, second ?? {}] : [second, first];
@@ -376,13 +385,13 @@ function onClientCallback(name, first, second) {
 			if (result === REFUSED) emitNet(responseEvent(caller), source, id, false, null);
 			else emitNet(responseEvent(caller), source, id, true, result ?? null);
 		} catch (error) {
-			log$2.error(`callback ${name} failed for ${source}`, error);
+			log$3.error(`callback ${name} failed for ${source}`, error);
 			emitNet(responseEvent(caller), source, id, false, null);
 		}
 	});
 }
 const pending = /* @__PURE__ */ new Map();
-onNet(responseEvent(resource$3), (id, ok, result) => {
+onNet(responseEvent(resource$4), (id, ok, result) => {
 	const entry = typeof id === "number" ? pending.get(id) : void 0;
 	if (!entry || entry.source !== Number(globalThis.source)) return;
 	pending.delete(id);
@@ -546,7 +555,7 @@ var AdminPanel = class {
 	apply(admin, raw) {
 		const patch = toPatch(raw);
 		const spec = patch ? this.schema.files[patch.file] : void 0;
-		if (!patch || !spec) return {
+		if (!patch || !spec || spec.memory) return {
 			ok: false,
 			error: ERR.type
 		};
@@ -561,7 +570,7 @@ var AdminPanel = class {
 		this.store(patch, spec);
 		return { ok: true };
 	}
-	/** A change made by the resource itself (game state the panel shows), stored without validation. */
+	/** A change made by the resource itself (game state the panel shows), stored without validation (a `memory` file only in memory). */
 	commit(file, key, value) {
 		const data = this.data.get(file);
 		if (!data) return;
@@ -630,6 +639,10 @@ var AdminPanel = class {
 		emitNet(ADMIN.worldEvent(this.resource), -1, file, key ?? null, value);
 	}
 	load(name, spec) {
+		if (spec.memory) {
+			this.data.set(name, {});
+			return;
+		}
 		const file = new DataFile(this.resource, name, this.log);
 		this.dataFiles.set(name, file);
 		const raw = file.read();
@@ -670,6 +683,96 @@ function notify(source, text, kind = "info", duration) {
 	};
 	emitNet(CORE.clientNotifyEvent, source, notification);
 }
+
+// ../../../packages/lib/src/server/inventory.ts
+const core$1 = () => resourceExport(CORE.resource);
+/**
+* Items through ai-core's inventory layer: the active inventory (ai-inventory, or another the panel picks) answers.
+* `inv` is a player server id or another inventory's id (stash name, plate). Calls fail (false / 0 / empty) while
+* no inventory runs.
+*/
+const inventory = {
+	/** Gives items; false when they do not fit or the item does not exist. */
+	addItem: (inv, item, count = 1, metadata, slot) => core$1().AddItem(inv, item, count, metadata, slot),
+	/** Takes items; false when there are not enough. */
+	removeItem: (inv, item, count = 1, metadata, slot) => core$1().RemoveItem(inv, item, count, metadata, slot),
+	/** How many of an item an inventory holds (stacks with matching metadata only when given). */
+	getItemCount: (inv, item, metadata) => core$1().GetItemCount(inv, item, metadata),
+	/** Whether an inventory holds at least `count` of an item. */
+	hasItem: (inv, item, count = 1) => core$1().HasItem(inv, item, count),
+	/** Whether the items would fit (weight and space). */
+	canCarryItem: (inv, item, count = 1, metadata) => core$1().CanCarryItem(inv, item, count, metadata),
+	/** Every stack of an inventory with its item label. */
+	getItems: (inv) => core$1().GetItems(inv),
+	/** Empties an inventory. */
+	clearInventory: (inv) => core$1().ClearInventory(inv),
+	/** Registers a stash (`jobs` empty: everyone may open it); ai-core registers it again with any inventory that starts later. */
+	registerStash: (name, label, slots, maxWeight, jobs = []) => core$1().RegisterStash(name, label, slots, maxWeight, jobs),
+	/** Opens a stash or another player's inventory on the player's screen, without range checks (check before). */
+	openInventory: (source, inv) => core$1().OpenInventory(source, inv),
+	/** Runs `handler` when a player uses the item; register once at start, ai-core keeps it across inventory restarts. */
+	registerUsableItem: (name, handler) => core$1().RegisterUsableItem(name, handler),
+	/** An item's label, weight and flags; null when the inventory does not know it. */
+	getItemDefinition: (name) => core$1().GetItemDefinition(name)
+};
+
+// ../../../packages/lib/src/server/command.ts
+const resource$3 = GetCurrentResourceName();
+const log$2 = createLogger(resource$3);
+/**
+* This resource's commands: announces them to ai-core (one call per tick of additions) and keeps each player's chat
+* suggestions as a delta of the commands they may use (sent when a character loads, after job or gang changes, and
+* to everyone online when commands are added; removed for everyone when the resource stops).
+*/
+var CommandSet = class {
+	list = [];
+	sent = /* @__PURE__ */ new Map();
+	announced = 0;
+	queued = false;
+	listening = false;
+	add(command) {
+		if (!this.listening) this.listen();
+		this.list.push(command);
+		if (this.queued) return;
+		this.queued = true;
+		setImmediate(() => this.flush());
+	}
+	/** Sends `source` the suggestions they gained and removes the ones they lost. */
+	refresh(source) {
+		const before = this.sent.get(source);
+		const now = /* @__PURE__ */ new Set();
+		const add = [];
+		for (const command of this.list) for (const name of command.info.names) {
+			if (!command.allowed(source, name)) continue;
+			now.add(name);
+			if (!before?.has(name)) add.push(command.suggestion(name));
+		}
+		this.sent.set(source, now);
+		if (add.length) emitNet("chat:addSuggestions", source, add);
+		if (before) {
+			for (const name of before) if (!now.has(name)) emitNet("chat:removeSuggestion", source, `/${name}`);
+		}
+	}
+	flush() {
+		this.queued = false;
+		optionalExport(CORE.resource)?.RegisterCommands(resource$3, this.list.slice(this.announced).map((c) => c.info));
+		this.announced = this.list.length;
+		for (const player of getPlayers()) this.refresh(Number(player));
+	}
+	listen() {
+		this.listening = true;
+		const refresh = (source) => this.refresh(Number(source));
+		on(CORE.playerLoadedEvent, refresh);
+		on(CORE.jobsChangedEvent, refresh);
+		on(CORE.gangsChangedEvent, refresh);
+		on("playerDropped", () => this.sent.delete(Number(globalThis.source)));
+		on("onResourceStop", (name) => {
+			if (name !== resource$3) return;
+			for (const command of this.list) for (const n of command.info.names) emitNet("chat:removeSuggestion", -1, `/${n}`);
+		});
+	}
+};
+const commands = new CommandSet();
 
 // ../../../packages/lib/src/server/netEvent.ts
 const log$1 = createLogger(GetCurrentResourceName());
@@ -25602,7 +25705,7 @@ onClientCallback(EVENTS.truckStart, async (source) => {
 onClientCallback(EVENTS.truckPlant, (source) => {
 	if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
 	if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
-	if ((optionalExport("ai-inventory")?.GetItemCount(source, content.settings.truck.item) ?? 0) < 1) return fail("ROB_ERR_ITEM");
+	if (!inventory.hasItem(source, content.settings.truck.item)) return fail("ROB_ERR_ITEM");
 	return {
 		ok: true,
 		token: truck.start(source, "plant"),
@@ -25614,7 +25717,7 @@ onClientCallback(EVENTS.truckPlanted, {
 	lock: true
 }, (source, token) => {
 	if (!truck.take(source, token, "plant", PLANT_SECONDS) || truck.isOpen) return fail("ROB_ERR_FAR");
-	if (!optionalExport("ai-inventory")?.RemoveItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
+	if (!inventory.removeItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
 	const p = pos(source);
 	optionalExport("ai-police")?.SendAlert(p.x, p.y, p.z, Locale("ROB_TRUCK_ALERT"));
 	notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS);
@@ -25715,7 +25818,7 @@ onClientCallback(EVENTS.start, {
 	if (GlobalState[robbedKey(id)] === true) return fail("ROB_ERR_EMPTY");
 	if (robberies.taken(target, source)) return fail("ROB_ERR_BUSY");
 	if (policeOnDuty() < place.minPolice) return fail("ROB_ERR_POLICE");
-	if (target.item && (optionalExport("ai-inventory")?.GetItemCount(source, target.item) ?? 0) < 1) return fail("ROB_ERR_ITEM");
+	if (target.item && !inventory.hasItem(source, target.item)) return fail("ROB_ERR_ITEM");
 	if (target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED) return fail("ROB_ERR_WEAPON");
 	if (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && Math.random() * 100 < place.alertChance) optionalExport("ai-police")?.SendAlert(place.coords.x, place.coords.y, place.coords.z, Locale("ROB_ALERT", place.label));
 	return {
@@ -25734,8 +25837,7 @@ onClientCallback(EVENTS.finish, {
 	const place = content.places.get(target.place);
 	if (!place || Date.now() - run.startedAt < target.seconds * 800 || !near(source, target.coords, 3)) return fail("ROB_ERR_FAR");
 	if (GlobalState[robbedKey(target.id)] === true) return fail("ROB_ERR_EMPTY");
-	const inventory = optionalExport("ai-inventory");
-	if (target.item && target.consume && !inventory?.RemoveItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
+	if (target.item && target.consume && !inventory.removeItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
 	GlobalState.set(robbedKey(target.id), true, true);
 	setTimeout(() => GlobalState.set(robbedKey(target.id), false, true), place.cooldown * 6e4);
 	if (target.kind === "entry") houses.enter(source, place);
@@ -25746,7 +25848,7 @@ onClientCallback(EVENTS.finish, {
 	const cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
 	if (cash > 0) core.AddMoney(source, content.settings.account, cash, `robbery:${place.id}`);
 	const count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
-	if (count > 0 && !inventory?.AddItem(source, target.reward, count)) notify(source, Locale("ROB_NO_ROOM"), "warning");
+	if (count > 0 && !inventory.addItem(source, target.reward, count)) notify(source, Locale("ROB_NO_ROOM"), "warning");
 	if (cash > 0) notify(source, Locale("ROB_CASH", cash), "success");
 	aiLog("robberies", `robbed ${target.id}`, {
 		source,

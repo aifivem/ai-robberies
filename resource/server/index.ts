@@ -1,4 +1,4 @@
-import { aiLog, aiLogChannels, notify, onClientCallback, optionalExport } from "@aicore-fivem/lib/server";
+import { aiLog, aiLogChannels, inventory, notify, onClientCallback, optionalExport } from "@aicore-fivem/lib/server";
 import { asArgs } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS, robbedKey, type Target } from "common/robbery";
@@ -72,7 +72,7 @@ onClientCallback(EVENTS.start, { args: ([id]) => asArgs(typeof id === "string" ?
   if (GlobalState[robbedKey(id)] === true) return fail("ROB_ERR_EMPTY");
   if (robberies.taken(target, source)) return fail("ROB_ERR_BUSY");
   if (policeOnDuty() < place.minPolice) return fail("ROB_ERR_POLICE");
-  if (target.item && (optionalExport("ai-inventory")?.GetItemCount(source, target.item) ?? 0) < 1) return fail("ROB_ERR_ITEM");
+  if (target.item && !inventory.hasItem(source, target.item)) return fail("ROB_ERR_ITEM");
   if (target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED) return fail("ROB_ERR_WEAPON");
   if (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && Math.random() * 100 < place.alertChance)
     optionalExport("ai-police")?.SendAlert(place.coords.x, place.coords.y, place.coords.z, Locale("ROB_ALERT", place.label));
@@ -87,8 +87,7 @@ onClientCallback(EVENTS.finish, { args: ([token]) => asArgs(typeof token === "nu
   const place = content.places.get(target.place);
   if (!place || Date.now() - run.startedAt < target.seconds * 800 || !near(source, target.coords, 3)) return fail("ROB_ERR_FAR");
   if (GlobalState[robbedKey(target.id)] === true) return fail("ROB_ERR_EMPTY");
-  const inventory = optionalExport("ai-inventory");
-  if (target.item && target.consume && !inventory?.RemoveItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
+  if (target.item && target.consume && !inventory.removeItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
   GlobalState.set(robbedKey(target.id), true, true);
   setTimeout(() => GlobalState.set(robbedKey(target.id), false, true), place.cooldown * 60_000);
   if (target.kind === "entry") houses.enter(source, place);
@@ -100,7 +99,7 @@ onClientCallback(EVENTS.finish, { args: ([token]) => asArgs(typeof token === "nu
   const cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
   if (cash > 0) core.AddMoney(source, content.settings.account, cash, `robbery:${place.id}`);
   const count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
-  if (count > 0 && !inventory?.AddItem(source, target.reward, count)) notify(source, Locale("ROB_NO_ROOM"), "warning");
+  if (count > 0 && !inventory.addItem(source, target.reward, count)) notify(source, Locale("ROB_NO_ROOM"), "warning");
   if (cash > 0) notify(source, Locale("ROB_CASH", cash), "success");
   aiLog("robberies", `robbed ${target.id}`, { source, metadata: { place: place.id, cash, reward: target.reward, count } });
   return { ok: true };

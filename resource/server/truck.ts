@@ -1,4 +1,4 @@
-import { aiLog, notify, onClientCallback, optionalExport } from "@aicore-fivem/lib/server";
+import { aiLog, inventory, notify, onClientCallback, optionalExport } from "@aicore-fivem/lib/server";
 import { asArgs, waitFor } from "@aicore-fivem/lib/shared";
 import { Locale, ResourceName } from "common";
 import { EVENTS } from "common/robbery";
@@ -184,7 +184,7 @@ onClientCallback(
   (source) => {
     if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
     if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
-    if ((optionalExport("ai-inventory")?.GetItemCount(source, content.settings.truck.item) ?? 0) < 1) return fail("ROB_ERR_ITEM");
+    if (!inventory.hasItem(source, content.settings.truck.item)) return fail("ROB_ERR_ITEM");
     return { ok: true, token: truck.start(source, "plant"), seconds: PLANT_SECONDS };
   },
   { lock: true },
@@ -192,7 +192,7 @@ onClientCallback(
 
 onClientCallback(EVENTS.truckPlanted, { args: ([token]) => asArgs(typeof token === "number" ? token : null), lock: true }, (source, token) => {
   if (!truck.take(source, token, "plant", PLANT_SECONDS) || truck.isOpen) return fail("ROB_ERR_FAR");
-  if (!optionalExport("ai-inventory")?.RemoveItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
+  if (!inventory.removeItem(source, content.settings.truck.item, 1)) return fail("ROB_ERR_ITEM");
   const p = pos(source);
   optionalExport("ai-police")?.SendAlert(p.x, p.y, p.z, Locale("ROB_TRUCK_ALERT"));
   notify(source, Locale("ROB_TRUCK_FUSE"), "warning", FUSE_MS);

@@ -1,6 +1,6 @@
 # ai-robberies
 
-Store, bank, jewelery and house robberies as panel data: places (police needed, cooldown, alert chance, optional house interior) and their targets (register, safe, locker, vitrine, door, entry, loot) with tool, time and reward; plus the armored truck job. Depends on ai-core (money, on-duty counts, prompts, progress); uses ai-inventory (tools, loot), ai-police (`SendAlert`) and ai-doorlock (door targets) when they run. Research: `docs/research/ai-robberies.md`.
+Store, bank, jewelery and house robberies as panel data: places (police needed, cooldown, alert chance, optional house interior) and their targets (register, safe, locker, vitrine, door, entry, loot) with tool, time and reward; plus the armored truck job. Depends on ai-core (money, on-duty counts, prompts, progress); uses the active inventory through ai-core's inventory layer (lib `inventory`) (tools, loot), ai-police (`SendAlert`) and ai-doorlock (door targets) when they run. Research: `docs/research/ai-robberies.md`.
 
 ## Decisions
 
