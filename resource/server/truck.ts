@@ -46,6 +46,8 @@ class Truck {
   private readonly attacking = new Set<number>();
   private readonly known = new Set<number>();
   private open = false;
+  /** The charge is on (its fuse runs): no second plant. */
+  private planted = false;
   private looted = false;
   private nextAllowed = 0;
   private readonly watcher = every(2000, () => this.guard(), {
@@ -89,6 +91,7 @@ class Truck {
     if (vehicle === null) return false;
     this.vehicle = vehicle;
     this.open = false;
+    this.planted = false;
     this.looted = false;
     const h = (at.heading * Math.PI) / 180;
     for (const side of [-1, 1]) {
@@ -191,9 +194,16 @@ class Truck {
     return this.looted;
   }
 
+  get isPlanted(): boolean {
+    return this.planted;
+  }
+
+  /** The charge is on: the doors of this truck blow after the fuse (a truck that ended meanwhile is left alone). */
   blow(fuseMs: number): void {
+    this.planted = true;
+    const vehicle = this.vehicle;
     setTimeout(() => {
-      if (!this.active) return;
+      if (!this.active || this.vehicle !== vehicle) return;
       SetVehicleDoorBroken(this.vehicle, 2, false);
       SetVehicleDoorBroken(this.vehicle, 3, false);
       this.open = true;
@@ -218,6 +228,7 @@ class Truck {
       if (entity && DoesEntityExist(entity)) DeleteEntity(entity);
     for (const source of this.known) emitNet(EVENTS.truckEnd, source);
     this.vehicle = 0;
+    this.planted = false;
     this.guards = [];
     this.strays = [];
     this.attacking.clear();
@@ -253,6 +264,7 @@ onClientCallback(
   EVENTS.truckPlant,
   (source) => {
     if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
+    if (truck.isPlanted) return fail("ROB_ERR_BUSY");
     if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
     if (!inventory.hasItem(source, content.settings.truck.item))
       return fail("ROB_ERR_ITEM");
@@ -265,7 +277,11 @@ onClientCallback(
 /** The charge goes on after the progress bar; the doors blow after the fuse. */
 async function plant(source: number): Promise<void> {
   const s = content.settings.truck;
-  if (!(await truck.step(source, "plant", s.plantSeconds)) || truck.isOpen)
+  if (
+    !(await truck.step(source, "plant", s.plantSeconds)) ||
+    truck.isOpen ||
+    truck.isPlanted
+  )
     return;
   if (!inventory.removeItem(source, s.item, 1))
     return notify(source, Locale("ROB_ERR_ITEM"), "error");

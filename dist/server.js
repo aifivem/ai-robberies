@@ -284,6 +284,7 @@ const CORE = {
 	clientDefinitionsEvent: "ai-core:client:definitions",
 	vehicleTypeCallback: "ai-core:vehicleType",
 	interactionStateKey: "ai:interaction",
+	pvpStateKey: "ai:pvp",
 	charactersCallback: "ai-core:characters",
 	createCharacterCallback: "ai-core:createCharacter",
 	deleteCharacterCallback: "ai-core:deleteCharacter",
@@ -805,7 +806,7 @@ var AdminPanel = class {
 	constructor(schema) {
 		this.schema = schema;
 		for (let [name, spec] of Object.entries(schema.files)) this.load(name, spec);
-		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelSummary", () => this.summary()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges), { rate: {
+		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelData", () => this.dataSnapshot()), registerExport("AdminPanelSummary", () => this.summary()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges), { rate: {
 			count: 4,
 			windowMs: 1e4
 		} }), setImmediate(() => core$16.RegisterAdminPanel(this.resource));
@@ -833,8 +834,11 @@ var AdminPanel = class {
 			resource: this.resource,
 			schema: this.schema,
 			texts: loadLocaleTexts(),
-			data: clone(Object.fromEntries(this.data))
+			data: this.dataSnapshot()
 		};
+	}
+	dataSnapshot() {
+		return clone(Object.fromEntries(this.data));
 	}
 	summary() {
 		let data = {}, index = {};
@@ -1298,8 +1302,8 @@ async function minigameFor(source, options) {
 		kind: "skillCheck",
 		stages: Array.from({ length: Math.min(10, Math.max(1, options.rounds ?? 2)) }, () => SKILL_STAGES[level]),
 		keys: options.keys ?? ["e"]
-	}, answer = await triggerClientCallback(LIB_UI.minigameForCallback, source, [request], 12e4).catch(() => null);
-	return answer === !0 || answer === "opened" ? "won" : answer === "broken" ? "broken" : "lost";
+	}, startedAt = GetGameTimer(), answer = await triggerClientCallback(LIB_UI.minigameForCallback, source, [request], 12e4).catch(() => null);
+	return answer === !0 || answer === "opened" ? GetGameTimer() - startedAt < (options.minMs ?? 0) ? "lost" : "won" : answer === "broken" ? "broken" : "lost";
 }
 // ../../../packages/lib/src/server/command.ts
 const resource = GetCurrentResourceName();
@@ -2567,6 +2571,7 @@ const truck = new class {
 	attacking = new Set();
 	known = new Set();
 	open = !1;
+	planted = !1;
 	looted = !1;
 	nextAllowed = 0;
 	watcher = every(2e3, () => this.guard(), {
@@ -2600,7 +2605,7 @@ const truck = new class {
 			locked: !0
 		});
 		if (vehicle === null) return !1;
-		this.vehicle = vehicle, this.open = !1, this.looted = !1;
+		this.vehicle = vehicle, this.open = !1, this.planted = !1, this.looted = !1;
 		let h = at.heading * Math.PI / 180;
 		for (let side of [-1, 1]) {
 			let guard = CreatePed(4, GetHashKey(s.guardModel), at.x + Math.cos(h) * 2.2 * side, at.y + Math.sin(h) * 2.2 * side, at.z, at.heading, !0, !0);
@@ -2645,9 +2650,14 @@ const truck = new class {
 	get isLooted() {
 		return this.looted;
 	}
+	get isPlanted() {
+		return this.planted;
+	}
 	blow(fuseMs) {
+		this.planted = !0;
+		let vehicle = this.vehicle;
 		setTimeout(() => {
-			if (!this.active) return;
+			if (!this.active || this.vehicle !== vehicle) return;
 			SetVehicleDoorBroken(this.vehicle, 2, !1), SetVehicleDoorBroken(this.vehicle, 3, !1), this.open = !0;
 			for (let source of playersNearEntity(this.vehicle, 100)) this.tell(source, !1);
 			let netId = NetworkGetNetworkIdFromEntity(this.vehicle);
@@ -2665,16 +2675,16 @@ const truck = new class {
 			...this.strays
 		]) entity && DoesEntityExist(entity) && DeleteEntity(entity);
 		for (let source of this.known) emitNet(EVENTS.truckEnd, source);
-		this.vehicle = 0, this.guards = [], this.strays = [], this.attacking.clear(), this.known.clear();
+		this.vehicle = 0, this.planted = !1, this.guards = [], this.strays = [], this.attacking.clear(), this.known.clear();
 	}
 }();
 onClientCallback(EVENTS.truckStart, async (source) => {
 	let s = content.settings.truck;
 	return s.giver.x === 0 && s.giver.y === 0 || !isNear(source, s.giver, 3) ? fail("ROB_ERR_FAR") : truck.active ? fail("ROB_ERR_TRUCK_BUSY") : truck.waitMs > 0 ? fail("ROB_ERR_TRUCK_WAIT") : policeOnDuty() < s.minPolice ? fail("ROB_ERR_POLICE") : s.spawns.length === 0 ? fail("ROB_ERR_FAR") : core.RemoveMoney(source, s.account, s.price, "robbery:truck") ? await truck.spawn(source) ? (aiLog("robberies", "armored truck job", { source }), { ok: !0 }) : (core.AddMoney(source, s.account, s.price, "robbery:truck:refund"), fail("ROB_ERR_FAR")) : fail("ROB_ERR_MONEY");
-}, { lock: !0 }), onClientCallback(EVENTS.truckPlant, (source) => !truck.atRear(source) || truck.isOpen ? fail("ROB_ERR_FAR") : truck.guardsDown() ? inventory.hasItem(source, content.settings.truck.item) ? (plant(source), { ok: !0 }) : fail("ROB_ERR_ITEM") : fail("ROB_ERR_GUARDS"), { lock: !0 });
+}, { lock: !0 }), onClientCallback(EVENTS.truckPlant, (source) => !truck.atRear(source) || truck.isOpen ? fail("ROB_ERR_FAR") : truck.isPlanted ? fail("ROB_ERR_BUSY") : truck.guardsDown() ? inventory.hasItem(source, content.settings.truck.item) ? (plant(source), { ok: !0 }) : fail("ROB_ERR_ITEM") : fail("ROB_ERR_GUARDS"), { lock: !0 });
 async function plant(source) {
 	let s = content.settings.truck;
-	if (await truck.step(source, "plant", s.plantSeconds) && !truck.isOpen) {
+	if (!(!await truck.step(source, "plant", s.plantSeconds) || truck.isOpen || truck.isPlanted)) {
 		if (!inventory.removeItem(source, s.item, 1)) return notify(source, Locale("ROB_ERR_ITEM"), "error");
 		dispatch.alert({
 			code: "10-90",

@@ -118,7 +118,7 @@ class Spots {
   /** A changed `rob:<id>` key. */
   robbedChanged(id: string, value: boolean): void {
     this.vaults.changed(id, value);
-    this.points.refresh();
+    this.points.refresh(id);
   }
 
   async rob(id: string): Promise<void> {
