@@ -21,9 +21,9 @@
   "store_2": {
     "label": "Strawberry 24/7",
     "coords": {
-      "x": 31.19,
-      "y": -1339.27,
-      "z": 29.5
+      "x": 28.21,
+      "y": -1339.14,
+      "z": 29.49
     },
     "minPolice": 0,
     "cooldown": 30,
@@ -75,9 +75,9 @@
   "store_5": {
     "label": "Vinewood 24/7",
     "coords": {
-      "x": 378.11,
-      "y": 333.36,
-      "z": 103.57
+      "x": 378.17,
+      "y": 333.44,
+      "z": 103.56
     },
     "minPolice": 0,
     "cooldown": 30,
@@ -147,8 +147,8 @@
   "store_9": {
     "label": "Sandy Shores 24/7",
     "coords": {
-      "x": 1959.21,
-      "y": 3748.83,
+      "x": 1959.26,
+      "y": 3748.92,
       "z": 32.34
     },
     "minPolice": 0,
@@ -165,9 +165,9 @@
   "store_10": {
     "label": "Harmony 24/7",
     "coords": {
-      "x": 546.56,
+      "x": 546.41,
       "y": 2662.8,
-      "z": 42.16
+      "z": 42.15
     },
     "minPolice": 0,
     "cooldown": 30,
@@ -183,9 +183,9 @@
   "store_11": {
     "label": "Mount Chiliad 24/7",
     "coords": {
-      "x": 1734.74,
-      "y": 6420.83,
-      "z": 35.04
+      "x": 1734.78,
+      "y": 6420.84,
+      "z": 35.03
     },
     "minPolice": 0,
     "cooldown": 30,
@@ -219,8 +219,8 @@
   "store_13": {
     "label": "Chumash 24/7",
     "coords": {
-      "x": -3250.09,
-      "y": 1004.46,
+      "x": -3250.02,
+      "y": 1004.43,
       "z": 12.83
     },
     "minPolice": 0,
@@ -238,8 +238,8 @@
     "label": "Banham Canyon 24/7",
     "coords": {
       "x": -3047.88,
-      "y": 585.64,
-      "z": 7.91
+      "y": 585.61,
+      "z": 7.9
     },
     "minPolice": 0,
     "cooldown": 30,
@@ -252,16 +252,124 @@
       "heading": 0
     }
   },
-  "bank_1": {
-    "label": "Legion Square Fleeca",
+  "store_15": {
+    "label": "Morningwood Rob's Liquor",
     "coords": {
-      "x": 146.92,
-      "y": -1046.11,
-      "z": 29.36
+      "x": -1478.94,
+      "y": -375.5,
+      "z": 39.16
     },
-    "minPolice": 2,
-    "cooldown": 60,
-    "alertChance": 100,
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_16": {
+    "label": "Vespucci Canals Rob's Liquor",
+    "coords": {
+      "x": -1220.85,
+      "y": -916.05,
+      "z": 11.32
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_17": {
+    "label": "Murrieta Heights Rob's Liquor",
+    "coords": {
+      "x": 1126.77,
+      "y": -980.1,
+      "z": 45.41
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_18": {
+    "label": "Great Ocean Rob's Liquor",
+    "coords": {
+      "x": -2959.64,
+      "y": 387.08,
+      "z": 14.04
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_19": {
+    "label": "Route 68 Liquor Barn",
+    "coords": {
+      "x": 1169.31,
+      "y": 2717.79,
+      "z": 37.15
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_20": {
+    "label": "Paleto Bay Liquor",
+    "coords": {
+      "x": -168.4,
+      "y": 6318.8,
+      "z": 30.58
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "store_21": {
+    "label": "Paleto Bay 24/7",
+    "coords": {
+      "x": 168.95,
+      "y": 6644.74,
+      "z": 31.7
+    },
+    "minPolice": 0,
+    "cooldown": 30,
+    "alertChance": 70,
     "blip": false,
     "interior": {
       "x": 0,
@@ -276,6 +384,24 @@
       "x": 311.15,
       "y": -284.49,
       "z": 54.16
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "bank_1": {
+    "label": "Legion Square Fleeca",
+    "coords": {
+      "x": 146.92,
+      "y": -1046.11,
+      "z": 29.36
     },
     "minPolice": 2,
     "cooldown": 60,
@@ -360,17 +486,53 @@
       "heading": 0
     }
   },
+  "paleto": {
+    "label": "Blaine County Savings Bank",
+    "coords": {
+      "x": -105.61,
+      "y": 6472.03,
+      "z": 31.62
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
+  "pacific": {
+    "label": "Pacific Standard",
+    "coords": {
+      "x": 261.95,
+      "y": 223.11,
+      "z": 106.28
+    },
+    "minPolice": 2,
+    "cooldown": 60,
+    "alertChance": 100,
+    "blip": false,
+    "interior": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "heading": 0
+    }
+  },
   "vangelico": {
     "label": "Vangelico Jewelry",
     "coords": {
-      "x": -622.2,
-      "y": -230.8,
-      "z": 38.05
+      "x": -630.5,
+      "y": -237.13,
+      "z": 38.08
     },
     "minPolice": 2,
     "cooldown": 45,
     "alertChance": 100,
-    "blip": false,
+    "blip": true,
     "interior": {
       "x": 0,
       "y": 0,
@@ -772,6 +934,1068 @@
       "y": 497.71,
       "z": 137.65,
       "heading": 191.5
+    }
+  },
+  "house_perfectdrive1": {
+    "label": "Perfect Drive 1",
+    "coords": {
+      "x": -784.72,
+      "y": 459.77,
+      "z": 100.39
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_perfectdrive2": {
+    "label": "Perfect Drive 2",
+    "coords": {
+      "x": -762.21,
+      "y": 430.96,
+      "z": 100.2
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_perfectdrive3": {
+    "label": "Perfect Drive 3",
+    "coords": {
+      "x": -678.01,
+      "y": 512.13,
+      "z": 113.53
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_perfectdrive4": {
+    "label": "Perfect Drive 4",
+    "coords": {
+      "x": -640.92,
+      "y": 520.61,
+      "z": 109.88
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_perfectdrive5": {
+    "label": "Perfect Drive 5",
+    "coords": {
+      "x": -622.84,
+      "y": 488.88,
+      "z": 108.88
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_perfectdrive6": {
+    "label": "Perfect Drive 6",
+    "coords": {
+      "x": -595.55,
+      "y": 530.28,
+      "z": 107.75
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_miltonroad1": {
+    "label": "Milton Road 1",
+    "coords": {
+      "x": -536.67,
+      "y": 477.36,
+      "z": 103.19
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_miltonroad2": {
+    "label": "Milton Road 2",
+    "coords": {
+      "x": -526.64,
+      "y": 516.97,
+      "z": 112.94
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_miltonroad3": {
+    "label": "Milton Road 3",
+    "coords": {
+      "x": -554.48,
+      "y": 541.26,
+      "z": 110.71
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_miltonroad4": {
+    "label": "Milton Road 4",
+    "coords": {
+      "x": -500.82,
+      "y": 551.92,
+      "z": 120.6
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_didiondrive1": {
+    "label": "Didion Drive 1",
+    "coords": {
+      "x": -418.09,
+      "y": 568.99,
+      "z": 125.06
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_didiondrive2": {
+    "label": "Didion Drive 2",
+    "coords": {
+      "x": -411.06,
+      "y": 529.18,
+      "z": 122.18
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_didiondrive3": {
+    "label": "Didion Drive 3",
+    "coords": {
+      "x": -348.73,
+      "y": 514.95,
+      "z": 120.65
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_didiondrive4": {
+    "label": "Didion Drive 4",
+    "coords": {
+      "x": -355.93,
+      "y": 469.76,
+      "z": 112.65
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_hillcrest1": {
+    "label": "Hillcrest Avenue 1",
+    "coords": {
+      "x": -908.66,
+      "y": 693.67,
+      "z": 151.44
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_hillcrest2": {
+    "label": "Hillcrest Avenue 2",
+    "coords": {
+      "x": -951.28,
+      "y": 682.65,
+      "z": 153.58
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_hillcrest3": {
+    "label": "Hillcrest Avenue 3",
+    "coords": {
+      "x": -1056.34,
+      "y": 761.34,
+      "z": 167.32
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_northsheldon1": {
+    "label": "North Sheldon Avenue 1",
+    "coords": {
+      "x": -1130.87,
+      "y": 784.44,
+      "z": 163.89
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_northsheldon2": {
+    "label": "North Sheldon Avenue 2",
+    "coords": {
+      "x": -1117.77,
+      "y": 761.48,
+      "z": 164.29
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_northsheldon3": {
+    "label": "North Sheldon Avenue 3",
+    "coords": {
+      "x": -1065.02,
+      "y": 772.17,
+      "z": 170.06
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_northsheldon4": {
+    "label": "North Sheldon Avenue 4",
+    "coords": {
+      "x": -962.7,
+      "y": 814.09,
+      "z": 177.57
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_northsheldon5": {
+    "label": "North Sheldon Avenue 5",
+    "coords": {
+      "x": -867.34,
+      "y": 785,
+      "z": 191.93
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_wildoats1": {
+    "label": "Wild Oats Drive 1",
+    "coords": {
+      "x": 80.09,
+      "y": 486.26,
+      "z": 148.2
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_wildoats2": {
+    "label": "Wild Oats Drive 2",
+    "coords": {
+      "x": 57.56,
+      "y": 449.68,
+      "z": 147.03
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_wildoats3": {
+    "label": "Wild Oats Drive 3",
+    "coords": {
+      "x": -110.05,
+      "y": 501.83,
+      "z": 143.38
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_jamestown1": {
+    "label": "Jamestown Street 1",
+    "coords": {
+      "x": 385.18,
+      "y": -1881.78,
+      "z": 26.03
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_jamestown2": {
+    "label": "Jamestown Street 2",
+    "coords": {
+      "x": 412.47,
+      "y": -1856.38,
+      "z": 27.32
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_jamestown3": {
+    "label": "Jamestown Street 3",
+    "coords": {
+      "x": 427.21,
+      "y": -1842.09,
+      "z": 28.46
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_roylow1": {
+    "label": "Roy Lowenstein Blvd 1",
+    "coords": {
+      "x": 348.77,
+      "y": -1820.95,
+      "z": 28.89
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_roylow2": {
+    "label": "Roy Lowenstein Blvd 2",
+    "coords": {
+      "x": 329.42,
+      "y": -1845.8,
+      "z": 27.75
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_roylow3": {
+    "label": "Roy Lowenstein Blvd 3",
+    "coords": {
+      "x": 320.27,
+      "y": -1854.06,
+      "z": 27.51
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_covenant1": {
+    "label": "Covenant Avenue 1",
+    "coords": {
+      "x": 192.29,
+      "y": -1883.23,
+      "z": 25.06
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_covenant2": {
+    "label": "Covenant Avenue 2",
+    "coords": {
+      "x": 171.52,
+      "y": -1871.53,
+      "z": 24.4
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_covenant3": {
+    "label": "Covenant Avenue 3",
+    "coords": {
+      "x": 128.24,
+      "y": -1897.02,
+      "z": 23.67
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_covenant4": {
+    "label": "Covenant Avenue 4",
+    "coords": {
+      "x": 130.6,
+      "y": -1853.22,
+      "z": 25.23
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grove1": {
+    "label": "Grove Street 1",
+    "coords": {
+      "x": 76.36,
+      "y": -1948.1,
+      "z": 21.17
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grove2": {
+    "label": "Grove Street 2",
+    "coords": {
+      "x": 101.03,
+      "y": -1912.16,
+      "z": 21.41
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grove3": {
+    "label": "Grove Street 3",
+    "coords": {
+      "x": 126.73,
+      "y": -1930.12,
+      "z": 21.38
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grove4": {
+    "label": "Grove Street 4",
+    "coords": {
+      "x": 114.25,
+      "y": -1961.19,
+      "z": 21.33
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity1": {
+    "label": "Prosperity Street 1",
+    "coords": {
+      "x": -1076.33,
+      "y": -1026.96,
+      "z": 4.54
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity2": {
+    "label": "Prosperity Street 2",
+    "coords": {
+      "x": -1064.64,
+      "y": -1057.42,
+      "z": 6.41
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity3": {
+    "label": "Prosperity Street 3",
+    "coords": {
+      "x": -1063.77,
+      "y": -1054.99,
+      "z": 2.15
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity4": {
+    "label": "Prosperity Street 4",
+    "coords": {
+      "x": -1054.07,
+      "y": -1000.2,
+      "z": 6.41
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity5": {
+    "label": "Prosperity Street 5",
+    "coords": {
+      "x": -985.89,
+      "y": -1121.74,
+      "z": 4.55
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity6": {
+    "label": "Prosperity Street 6",
+    "coords": {
+      "x": -1024.42,
+      "y": -1140,
+      "z": 2.75
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity7": {
+    "label": "Prosperity Street 7",
+    "coords": {
+      "x": -1074.13,
+      "y": -1152.73,
+      "z": 2.16
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity8": {
+    "label": "Prosperity Street 8",
+    "coords": {
+      "x": -1063.57,
+      "y": -1160.35,
+      "z": 2.75
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity10": {
+    "label": "Prosperity Street 10",
+    "coords": {
+      "x": -869.53,
+      "y": -1103.41,
+      "z": 6.45
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_prosperity11": {
+    "label": "Prosperity Street 11",
+    "coords": {
+      "x": -869.07,
+      "y": -1105.48,
+      "z": 2.49
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grapeseed1": {
+    "label": "Grapeseed 1",
+    "coords": {
+      "x": 1662.07,
+      "y": 4776.19,
+      "z": 42.07
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_grapeseed2": {
+    "label": "Grapeseed 2",
+    "coords": {
+      "x": 1664.04,
+      "y": 4739.68,
+      "z": 42.01
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto1": {
+    "label": "Paleto Bay 1",
+    "coords": {
+      "x": -360.24,
+      "y": 6260.61,
+      "z": 31.9
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto2": {
+    "label": "Paleto Bay 2",
+    "coords": {
+      "x": -366.57,
+      "y": 6214.12,
+      "z": 31.84
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto3": {
+    "label": "Paleto Bay 3",
+    "coords": {
+      "x": -447.87,
+      "y": 6260.25,
+      "z": 30.05
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto4": {
+    "label": "Paleto Bay 4",
+    "coords": {
+      "x": -245.99,
+      "y": 6414.45,
+      "z": 31.46
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto5": {
+    "label": "Paleto Bay 5",
+    "coords": {
+      "x": -9.59,
+      "y": 6654.23,
+      "z": 31.7
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paleto6": {
+    "label": "Paleto Bay 6",
+    "coords": {
+      "x": 25.1,
+      "y": 6601.76,
+      "z": 32.47
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paletohotels1": {
+    "label": "Paleto Bay Motel 1",
+    "coords": {
+      "x": -159.84,
+      "y": 6432.65,
+      "z": 31.93
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
+    }
+  },
+  "house_paletohotels2": {
+    "label": "Paleto Bay Motel 2",
+    "coords": {
+      "x": -149.98,
+      "y": 6416.07,
+      "z": 31.92
+    },
+    "minPolice": 0,
+    "cooldown": 60,
+    "alertChance": 30,
+    "blip": false,
+    "interior": {
+      "x": 346.55,
+      "y": -1012.83,
+      "z": -99.2,
+      "heading": 5.8
     }
   }
 }
