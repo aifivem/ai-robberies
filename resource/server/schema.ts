@@ -125,6 +125,8 @@ export const robberiesSchema: PanelSchema = {
         vaultModel: "",
         vaultClosed: 0,
         vaultOpen: 0,
+        minigame: "auto",
+        difficulty: "medium",
       },
       sections: {
         place: { type: "text", min: 1, max: 48 },
@@ -154,6 +156,11 @@ export const robberiesSchema: PanelSchema = {
         vaultModel: { type: "text", min: 0, max: 64 },
         vaultClosed: { type: "number", min: -720, max: 720 },
         vaultOpen: { type: "number", min: -720, max: 720 },
+        minigame: {
+          type: "enum",
+          values: ["auto", "none", "skillCheck", "lockpick"],
+        },
+        difficulty: { type: "enum", values: ["easy", "medium", "hard"] },
       },
     },
   },
@@ -301,6 +308,32 @@ export const robberiesSchema: PanelSchema = {
               placeholder: "ADMIN_P_ITEM",
             },
             { widget: "switch", path: "consume", label: "ADMIN_F_CONSUME" },
+            {
+              widget: "select",
+              path: "minigame",
+              label: "ADMIN_F_MINIGAME",
+              hint: "ADMIN_H_MINIGAME",
+              options: [
+                { value: "auto", label: "ADMIN_O_MINIGAME_AUTO" },
+                { value: "none", label: "ADMIN_O_MINIGAME_NONE" },
+                { value: "skillCheck", label: "ADMIN_O_MINIGAME_SKILL" },
+                { value: "lockpick", label: "ADMIN_O_MINIGAME_LOCKPICK" },
+              ],
+            },
+            {
+              widget: "select",
+              path: "difficulty",
+              label: "ADMIN_F_DIFFICULTY",
+              showIf: {
+                path: "minigame",
+                values: ["auto", "skillCheck", "lockpick"],
+              },
+              options: [
+                { value: "easy", label: "ADMIN_O_EASY" },
+                { value: "medium", label: "ADMIN_O_MEDIUM" },
+                { value: "hard", label: "ADMIN_O_HARD" },
+              ],
+            },
           ],
         },
         {

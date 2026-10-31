@@ -278,21 +278,16 @@ const CORE = {
 	clientPlayerUnloadedEvent: "ai-core:client:playerUnloaded",
 	clientCharacterPortraitEvent: "ai-core:client:characterPortrait",
 	characterLooksEvent: "ai-core:client:characterLooks",
-	clientPromptPressedEvent: "ai-core:client:promptPressed",
 	clientCacheEvent: "ai-core:client:cache",
 	clientHudVisibleEvent: "ai-core:client:hudVisible",
 	clientWorldSyncEvent: "ai-core:client:worldSync",
-	clientCancelProgressEvent: "ai-core:client:cancelProgress",
 	clientDefinitionsEvent: "ai-core:client:definitions",
 	vehicleTypeCallback: "ai-core:vehicleType",
-	progressForCallback: "ai-core:progressFor",
-	progressForCancelEvent: "ai-core:client:progressForCancel",
 	interactionStateKey: "ai:interaction",
 	charactersCallback: "ai-core:characters",
 	createCharacterCallback: "ai-core:createCharacter",
 	deleteCharacterCallback: "ai-core:deleteCharacter",
 	selectCharacterCallback: "ai-core:selectCharacter",
-	clientNotifyEvent: "ai-core:client:notify",
 	spawnEvent: "ai-core:client:spawn",
 	chooseSpawnEvent: "ai-core:client:chooseSpawn",
 	spawnChoiceCallback: "ai-core:spawnChoice",
@@ -313,6 +308,31 @@ const CORE = {
 	props: "ai:props",
 	setup: "ai:setup",
 	fuel: "fuel"
+}, SKILL_STAGES = {
+	easy: {
+		area: 50,
+		speed: .6
+	},
+	medium: {
+		area: 40,
+		speed: .85
+	},
+	hard: {
+		area: 25,
+		speed: 1
+	}
+}, LOCKPICK_AREAS = {
+	easy: 18,
+	medium: 11,
+	hard: 6
+}, LIB_UI = {
+	resource: "ai-lib",
+	notifyEvent: "ai-lib:client:notify",
+	promptPressedEvent: "ai-lib:client:promptPressed",
+	cancelProgressEvent: "ai-lib:client:cancelProgress",
+	progressForCallback: "ai-lib:progressFor",
+	progressForCancelEvent: "ai-lib:client:progressForCancel",
+	minigameForCallback: "ai-lib:minigameFor"
 }, named = new Set();
 function registerExport(name, handler) {
 	named.add(name), globalThis.exports(name, handler);
@@ -912,7 +932,7 @@ function notify(source, text, kind = "info", duration) {
 		kind,
 		duration
 	};
-	emitNet(CORE.clientNotifyEvent, source, notification);
+	emitNet(LIB_UI.notifyEvent, source, notification);
 }
 // ../../../packages/lib/src/server/inventory.ts
 const core$14 = resourceExport(CORE.resource), inventory = {
@@ -1195,14 +1215,27 @@ on(CORE.playerUnloadedEvent, (source) => {
 });
 function progressFor(source, options) {
 	let previous = running.get(source);
-	previous && (previous(!1), emitNet(CORE.progressForCancelEvent, source));
+	previous && (previous(!1), emitNet(LIB_UI.progressForCancelEvent, source));
 	let { minRatio = .8, ...bar } = options, startedAt = GetGameTimer();
 	return new Promise((resolve) => {
 		let done = !1, settle = (ok) => {
 			done || (done = !0, running.get(source) === settle && running.delete(source), resolve(ok));
 		};
-		running.set(source, settle), triggerClientCallback(CORE.progressForCallback, source, [bar], bar.duration + 15e3).then((answer) => settle(answer === !0 && GetGameTimer() - startedAt >= bar.duration * minRatio), () => settle(!1));
+		running.set(source, settle), triggerClientCallback(LIB_UI.progressForCallback, source, [bar], bar.duration + 15e3).then((answer) => settle(answer === !0 && GetGameTimer() - startedAt >= bar.duration * minRatio), () => settle(!1));
 	});
+}
+async function minigameFor(source, options) {
+	let level = options.difficulty ?? "medium", request = options.game === "lockpick" ? {
+		kind: "lockpick",
+		pins: Math.min(6, Math.max(1, Math.floor(options.pins ?? 1))),
+		area: LOCKPICK_AREAS[level],
+		picks: Math.min(10, Math.max(1, Math.floor(options.picks ?? 1)))
+	} : {
+		kind: "skillCheck",
+		stages: Array.from({ length: Math.min(10, Math.max(1, options.rounds ?? 2)) }, () => SKILL_STAGES[level]),
+		keys: options.keys ?? ["e"]
+	}, answer = await triggerClientCallback(LIB_UI.minigameForCallback, source, [request], 12e4).catch(() => null);
+	return answer === !0 || answer === "opened" ? "won" : answer === "broken" ? "broken" : "lost";
 }
 // ../../../packages/lib/src/server/command.ts
 const resource = GetCurrentResourceName();
@@ -1508,6 +1541,24 @@ function readPlace(id, v) {
 		interior: optional4(v.interior)
 	};
 }
+const MINIGAMES = [
+	"auto",
+	"none",
+	"skillCheck",
+	"lockpick"
+], DIFFICULTIES = [
+	"easy",
+	"medium",
+	"hard"
+], AUTO_MINIGAME = {
+	register: "lockpick",
+	safe: "skillCheck",
+	locker: "skillCheck",
+	vitrine: "none",
+	door: "skillCheck",
+	entry: "lockpick",
+	loot: "none"
+};
 function readTarget(id, v) {
 	let cashMin = int(v.cashMin, 0, 0, 1e6), rewardMin = int(v.rewardMin, 0, 0, 100);
 	return {
@@ -1527,7 +1578,9 @@ function readTarget(id, v) {
 		door: str(v.door, "", 64),
 		vaultModel: str(v.vaultModel, "", 64),
 		vaultClosed: num(v.vaultClosed, 0, -720, 720),
-		vaultOpen: num(v.vaultOpen, 0, -720, 720)
+		vaultOpen: num(v.vaultOpen, 0, -720, 720),
+		minigame: MINIGAMES.find((m) => m === v.minigame) ?? "auto",
+		difficulty: DIFFICULTIES.find((d) => d === v.difficulty) ?? "medium"
 	};
 }
 const ANIMS = {
@@ -1766,7 +1819,9 @@ const ANIMS = {
 				door: "",
 				vaultModel: "",
 				vaultClosed: 0,
-				vaultOpen: 0
+				vaultOpen: 0,
+				minigame: "auto",
+				difficulty: "medium"
 			},
 			sections: {
 				place: {
@@ -1854,6 +1909,23 @@ const ANIMS = {
 					type: "number",
 					min: -720,
 					max: 720
+				},
+				minigame: {
+					type: "enum",
+					values: [
+						"auto",
+						"none",
+						"skillCheck",
+						"lockpick"
+					]
+				},
+				difficulty: {
+					type: "enum",
+					values: [
+						"easy",
+						"medium",
+						"hard"
+					]
 				}
 			}
 		}
@@ -2025,6 +2097,57 @@ const ANIMS = {
 							widget: "switch",
 							path: "consume",
 							label: "ADMIN_F_CONSUME"
+						},
+						{
+							widget: "select",
+							path: "minigame",
+							label: "ADMIN_F_MINIGAME",
+							hint: "ADMIN_H_MINIGAME",
+							options: [
+								{
+									value: "auto",
+									label: "ADMIN_O_MINIGAME_AUTO"
+								},
+								{
+									value: "none",
+									label: "ADMIN_O_MINIGAME_NONE"
+								},
+								{
+									value: "skillCheck",
+									label: "ADMIN_O_MINIGAME_SKILL"
+								},
+								{
+									value: "lockpick",
+									label: "ADMIN_O_MINIGAME_LOCKPICK"
+								}
+							]
+						},
+						{
+							widget: "select",
+							path: "difficulty",
+							label: "ADMIN_F_DIFFICULTY",
+							showIf: {
+								path: "minigame",
+								values: [
+									"auto",
+									"skillCheck",
+									"lockpick"
+								]
+							},
+							options: [
+								{
+									value: "easy",
+									label: "ADMIN_O_EASY"
+								},
+								{
+									value: "medium",
+									label: "ADMIN_O_MEDIUM"
+								},
+								{
+									value: "hard",
+									label: "ADMIN_O_HARD"
+								}
+							]
 						}
 					]
 				},
@@ -2532,15 +2655,24 @@ const robberies = new class {
 	async run(source, target) {
 		this.busy.set(target.id, {
 			source,
-			until: GetGameTimer() + target.seconds * 2e3 + 15e3
+			until: GetGameTimer() + target.seconds * 2e3 + 135e3
 		}), this.runs.set(source, target);
-		let done = await progressFor(source, {
+		let done = await this.minigame(source, target) && await progressFor(source, {
 			label: Locale("ROB_WORKING"),
 			duration: target.seconds * 1e3,
 			anim: ANIMS[target.kind],
 			face: target.coords
 		});
 		return this.runs.get(source) === target && this.runs.delete(source), this.busy.get(target.id)?.source === source && this.busy.delete(target.id), done;
+	}
+	async minigame(source, target) {
+		let game = target.minigame === "auto" ? AUTO_MINIGAME[target.kind] : target.minigame;
+		if (game === "none") return !0;
+		let outcome = await minigameFor(source, {
+			game,
+			difficulty: target.difficulty
+		});
+		return outcome === "won" || (outcome === "broken" && target.item ? (inventory.removeItem(source, target.item, 1), notify(source, Locale("ROB_PICK_BROKE"), "error")) : notify(source, Locale("ROB_MINIGAME_LOST"), "warning"), !1);
 	}
 	shouldAlert(placeId, minutes) {
 		return this.alerted.take(placeId, minutes * 6e4);

@@ -131,5 +131,17 @@
   "ADMIN_F_TRUCK_SPAWNS": "Truck spawns",
   "ADMIN_ADD_TRUCK_SPAWN": "Add spawn",
   "ADMIN_F_TRUCK_SPAWN": "Spawn",
-  "ADMIN_DELETE_PLACE_DESC": "Its targets stop working until they name another place."
+  "ADMIN_DELETE_PLACE_DESC": "Its targets stop working until they name another place.",
+  "ROB_PICK_BROKE": "Your lockpick broke",
+  "ROB_MINIGAME_LOST": "You could not get it open",
+  "ADMIN_F_MINIGAME": "Minigame",
+  "ADMIN_H_MINIGAME": "Played before the progress bar. Automatic: lockpick for registers and entries, skill check for safes, lockers and doors, none for vitrines and loot. A lockpick that breaks takes one of the item above.",
+  "ADMIN_O_MINIGAME_AUTO": "Automatic (by kind)",
+  "ADMIN_O_MINIGAME_NONE": "None",
+  "ADMIN_O_MINIGAME_SKILL": "Skill check",
+  "ADMIN_O_MINIGAME_LOCKPICK": "Lockpick",
+  "ADMIN_F_DIFFICULTY": "Difficulty",
+  "ADMIN_O_EASY": "Easy",
+  "ADMIN_O_MEDIUM": "Medium",
+  "ADMIN_O_HARD": "Hard"
 }

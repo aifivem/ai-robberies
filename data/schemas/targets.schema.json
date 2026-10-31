@@ -125,6 +125,23 @@
           "type": "number",
           "minimum": -720,
           "maximum": 720
+        },
+        "minigame": {
+          "description": "Minigame: Played before the progress bar. Automatic: lockpick for registers and entries, skill check for safes, lockers and doors, none for vitrines and loot. A lockpick that breaks takes one of the item above.",
+          "enum": [
+            "auto",
+            "none",
+            "skillCheck",
+            "lockpick"
+          ]
+        },
+        "difficulty": {
+          "description": "Difficulty",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ]
         }
       },
       "required": [
@@ -143,7 +160,9 @@
         "door",
         "vaultModel",
         "vaultClosed",
-        "vaultOpen"
+        "vaultOpen",
+        "minigame",
+        "difficulty"
       ]
     }
   },

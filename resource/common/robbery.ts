@@ -191,7 +191,28 @@ export interface Target {
   vaultModel: string;
   vaultClosed: number;
   vaultOpen: number;
+  /** Played before the progress bar: "auto" picks by kind (`AUTO_MINIGAME`). */
+  minigame: TargetMinigame;
+  difficulty: "easy" | "medium" | "hard";
 }
+
+export type TargetMinigame = "auto" | "none" | "skillCheck" | "lockpick";
+const MINIGAMES: TargetMinigame[] = ["auto", "none", "skillCheck", "lockpick"];
+const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+
+/** The minigame "auto" means for each kind. */
+export const AUTO_MINIGAME: Record<
+  TargetKind,
+  "none" | "skillCheck" | "lockpick"
+> = {
+  register: "lockpick",
+  safe: "skillCheck",
+  locker: "skillCheck",
+  vitrine: "none",
+  door: "skillCheck",
+  entry: "lockpick",
+  loot: "none",
+};
 
 /** One target record (`panel.records` / `world.records`). */
 export function readTarget(id: string, v: Record<string, unknown>): Target {
@@ -217,6 +238,8 @@ export function readTarget(id: string, v: Record<string, unknown>): Target {
     vaultModel: str(v.vaultModel, "", 64),
     vaultClosed: num(v.vaultClosed, 0, -720, 720),
     vaultOpen: num(v.vaultOpen, 0, -720, 720),
+    minigame: MINIGAMES.find((m) => m === v.minigame) ?? "auto",
+    difficulty: DIFFICULTIES.find((d) => d === v.difficulty) ?? "medium",
   };
 }
 
