@@ -79,7 +79,7 @@ const oneArg = (read) => ([value]) => {
 }, fail = (error) => ({
 	ok: !1,
 	error
-}), isPublic = (rule) => rule.jobs.length === 0 && rule.gangs.length === 0, BLIP_STYLE_FIELDS = {
+}), randomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1)), pickRandom = (list) => list[Math.floor(Math.random() * list.length)], rollChance = (percent) => Math.random() * 100 < percent, isPublic = (rule) => rule.jobs.length === 0 && rule.gangs.length === 0, BLIP_STYLE_FIELDS = {
 	sprite: {
 		type: "number",
 		min: 0,
@@ -285,6 +285,8 @@ const CORE = {
 	vehicleTypeCallback: "ai-core:vehicleType",
 	interactionStateKey: "ai:interaction",
 	pvpStateKey: "ai:pvp",
+	medicalStateKey: "ai:medical",
+	clientDeadEvent: "ai-core:client:dead",
 	charactersCallback: "ai-core:characters",
 	createCharacterCallback: "ai-core:createCharacter",
 	deleteCharacterCallback: "ai-core:deleteCharacter",
@@ -1054,6 +1056,9 @@ var OnlinePlayers = class {
 	character(source) {
 		return this.start(), this.players.get(source)?.character ?? null;
 	}
+	charId(source) {
+		return this.start(), this.players.get(source)?.character.id;
+	}
 	name(source, options = {}) {
 		let c = this.character(source);
 		return c ? `${c.firstname} ${c.lastname}` : options.fallback === !1 ? "" : GetPlayerName(String(source));
@@ -1185,9 +1190,9 @@ function playersNearEntity(entity, radius) {
 }
 // ../../../packages/lib/src/server/players.ts
 const log$4 = createLogger(GetCurrentResourceName()), dropped = new Set();
-let listening = !1;
+let listening$1 = !1;
 function onDropped(fn) {
-	listening || (listening = !0, on("playerDropped", () => {
+	listening$1 || (listening$1 = !0, on("playerDropped", () => {
 		let source = Number(globalThis.source);
 		for (let handler of dropped) handler(source);
 	})), dropped.add(fn);
@@ -1235,19 +1240,19 @@ function onCharacter(handlers) {
 		} catch (error) {
 			log$4.error(`character loaded handler failed for ${source}`, error);
 		}
-	}, end = (source, charId) => {
+	}, end = (source, charId, reason) => {
 		if (live.delete(source)) try {
-			handlers.unloaded?.(source, charId);
+			handlers.unloaded?.(source, charId, reason);
 		} catch (error) {
 			log$4.error(`character unloaded handler failed for ${source}`, error);
 		}
 	};
 	on(CORE.playerLoadedEvent, (source, character) => {
 		let previous = live.get(source);
-		previous !== void 0 && end(source, previous), deliver(source, character);
-	}), on(CORE.playerUnloadedEvent, (source, charId) => end(source, charId)), onDropped((source) => setImmediate(() => {
+		previous !== void 0 && end(source, previous, "switch"), deliver(source, character);
+	}), on(CORE.playerUnloadedEvent, (source, charId, reason) => end(source, charId, reason === "dropped" ? "dropped" : "switch")), onDropped((source) => setImmediate(() => {
 		let charId = live.get(source);
-		charId !== void 0 && end(source, charId);
+		charId !== void 0 && end(source, charId, "dropped");
 	})), setImmediate(() => {
 		for (let source of online.sources()) {
 			if (live.has(source)) continue;
@@ -1333,6 +1338,23 @@ createLogger(resource), new class {
 		});
 	}
 }(), createLogger(GetCurrentResourceName()), createLogger("aicore-lib");
+// ../../../packages/lib/src/fivem/byResource.ts
+const stopHandlers = [];
+let listening = !1;
+function onAnyStop(handler) {
+	if (stopHandlers.push(handler), listening) return;
+	listening = !0;
+	let event = IsDuplicityVersion() ? "onResourceStop" : "onClientResourceStop";
+	on(event, (resource) => {
+		for (let stop of stopHandlers) stop(resource);
+	});
+}
+function onStop(fn) {
+	let self = GetCurrentResourceName();
+	onAnyStop((resource) => {
+		resource === self && fn();
+	});
+}
 let log = null;
 var ScheduledJob = class {
 	interval;
@@ -1530,8 +1552,8 @@ const core$5 = resourceExport(CORE.resource), buckets = {
 };
 resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
 // resource/common/locale.ts
-const Locale = createLocale(), ResourceName = GetCurrentResourceName();
-IsDuplicityVersion();
+const Locale = createLocale();
+GetCurrentResourceName(), IsDuplicityVersion();
 // resource/common/robbery.ts
 const EVENTS = {
 	start: "ai-robberies:start",
@@ -2490,7 +2512,7 @@ const ANIMS = {
 	},
 	places: panel.records("places", readPlace),
 	targets: panel.records("targets", readTarget)
-}, random = (min, max) => min + Math.floor(Math.random() * (max - min + 1)), policeOnDuty = () => online.countOnDuty(content.settings.policeJobs), houses = new class {
+}, policeOnDuty = () => online.countOnDuty(content.settings.policeJobs), houses = new class {
 	inside = new Map();
 	worlds = new Map();
 	insideOf(source) {
@@ -2542,9 +2564,7 @@ onClientCallback(EVENTS.exit, (source) => {
 }, { lock: !0 }), onCharacter({
 	loaded: (source) => houses.rejoin(source),
 	unloaded: (source) => houses.forget(source)
-}), on("onResourceStop", (resource) => {
-	resource === ResourceName && houses.stop();
-});
+}), onStop(() => houses.stop());
 // resource/server/truck.ts
 const STEP_ANIMS = {
 	plant: {
@@ -2595,7 +2615,7 @@ const truck = new class {
 		}
 	}
 	async create(source) {
-		let s = content.settings.truck, at = s.spawns[random(0, s.spawns.length - 1)];
+		let s = content.settings.truck, at = pickRandom(s.spawns);
 		if (!at) return !1;
 		this.nextAllowed = Date.now() + s.cooldown * 6e4;
 		let vehicle = await spawnVehicle({
@@ -2706,13 +2726,13 @@ async function loot(source) {
 	if (!await truck.step(source, "loot", s.lootSeconds)) return;
 	if (truck.isLooted) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
 	truck.loot();
-	let cash = random(s.cashMin, s.cashMax);
+	let cash = randomInt(s.cashMin, s.cashMax);
 	core.AddMoney(source, content.settings.account, cash, "robbery:truck"), notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", "armored truck looted", {
 		source,
 		metadata: { cash }
 	});
 }
-on("onResourceStop", (resource) => resource === ResourceName && truck.end());
+onStop(() => truck.end());
 // resource/server/index.ts
 const robbed = new GlobalGroup("rob:", stateBoolean);
 aiLogChannels({ robberies: {} });
@@ -2760,7 +2780,7 @@ onClientCallback(EVENTS.start, {
 	return !target || !place || !isNear(source, target.coords, 2.5) || place.interior && target.kind !== "entry" && houses.insideOf(source) !== place.id ? fail("ROB_ERR_FAR") : target.kind === "entry" && robbed.get(id) === !0 ? (houses.enter(source, place), {
 		ok: !0,
 		entered: !0
-	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && Math.random() * 100 < place.alertChance && dispatch.alert({
+	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && rollChance(place.alertChance) && dispatch.alert({
 		code: "10-90",
 		title: Locale("ROB_ALERT"),
 		message: place.label,
@@ -2777,9 +2797,9 @@ async function rob(source, target) {
 	if (robbed.get(target.id) === !0) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
 	if (target.item && target.consume && !inventory.removeItem(source, target.item, 1)) return notify(source, Locale("ROB_ERR_ITEM"), "error");
 	robbed.set(target.id, !0), setTimeout(() => robbed.set(target.id, !1), place.cooldown * 6e4), target.kind === "entry" && houses.enter(source, place), target.kind === "door" && target.door && (optionalExport("ai-doorlock")?.SetDoorState(target.door, !1), setTimeout(() => optionalExport("ai-doorlock")?.SetDoorState(target.door, !0), place.cooldown * 6e4));
-	let cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
+	let cash = target.cashMax > 0 ? randomInt(target.cashMin, target.cashMax) : 0;
 	cash > 0 && core.AddMoney(source, content.settings.account, cash, `robbery:${place.id}`);
-	let count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
+	let count = target.reward ? randomInt(target.rewardMin, target.rewardMax) : 0;
 	count > 0 && !inventory.addItem(source, target.reward, count) && notify(source, Locale("ROB_NO_ROOM"), "warning"), cash > 0 && notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", `robbed ${target.id}`, {
 		source,
 		metadata: {

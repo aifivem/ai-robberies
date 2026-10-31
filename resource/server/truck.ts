@@ -7,14 +7,15 @@ import {
   isNear,
   notify,
   onClientCallback,
+  onStop,
   playersNearEntity,
   progressFor,
   spawnVehicle,
 } from "@aicore-fivem/lib/server";
-import { fail, waitFor } from "@aicore-fivem/lib/shared";
-import { Locale, ResourceName } from "common";
+import { fail, pickRandom, randomInt, waitFor } from "@aicore-fivem/lib/shared";
+import { Locale } from "common";
 import { EVENTS } from "common/robbery";
-import { content, core, policeOnDuty, random } from "./content";
+import { content, core, policeOnDuty } from "./content";
 
 type Step = "plant" | "loot";
 
@@ -79,7 +80,7 @@ class Truck {
 
   private async create(source: number): Promise<boolean> {
     const s = content.settings.truck;
-    const at = s.spawns[random(0, s.spawns.length - 1)];
+    const at = pickRandom(s.spawns);
     if (!at) return false;
     this.nextAllowed = Date.now() + s.cooldown * 60_000;
     const vehicle = await spawnVehicle({
@@ -315,13 +316,10 @@ async function loot(source: number): Promise<void> {
   if (!(await truck.step(source, "loot", s.lootSeconds))) return;
   if (truck.isLooted) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
   truck.loot();
-  const cash = random(s.cashMin, s.cashMax);
+  const cash = randomInt(s.cashMin, s.cashMax);
   core.AddMoney(source, content.settings.account, cash, "robbery:truck");
   notify(source, Locale("ROB_CASH", cash), "success");
   aiLog("robberies", "armored truck looted", { source, metadata: { cash } });
 }
 
-on(
-  "onResourceStop",
-  (resource: string) => resource === ResourceName && truck.end(),
-);
+onStop(() => truck.end());

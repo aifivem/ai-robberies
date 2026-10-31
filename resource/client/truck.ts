@@ -43,8 +43,8 @@ class TruckJob {
       color: 1,
       scale: 1,
       shortRange: false,
+      route: true,
     });
-    SetBlipRoute(this.blip, true);
     const at = {
       coords: rear,
       radius: 2,

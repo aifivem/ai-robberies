@@ -14,8 +14,5 @@ export const content = {
   targets: panel.records("targets", readTarget),
 };
 
-export const random = (min: number, max: number) =>
-  min + Math.floor(Math.random() * (max - min + 1));
-
 export const policeOnDuty = () =>
   online.countOnDuty(content.settings.policeJobs);

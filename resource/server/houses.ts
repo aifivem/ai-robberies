@@ -3,9 +3,9 @@ import {
   isNear,
   onCharacter,
   onClientCallback,
+  onStop,
 } from "@aicore-fivem/lib/server";
 import { fail, type Vec4 } from "@aicore-fivem/lib/shared";
-import { ResourceName } from "common";
 import { EVENTS, INSIDE_META, type Place } from "common/robbery";
 import { content, core } from "./content";
 
@@ -107,6 +107,4 @@ onCharacter({
   loaded: (source) => houses.rejoin(source),
   unloaded: (source) => houses.forget(source),
 });
-on("onResourceStop", (resource: string) => {
-  if (resource === ResourceName) houses.stop();
-});
+onStop(() => houses.stop());

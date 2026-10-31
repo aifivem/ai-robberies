@@ -14,7 +14,13 @@ import {
   progressFor,
   stateBoolean,
 } from "@aicore-fivem/lib/server";
-import { fail, oneArg, readText } from "@aicore-fivem/lib/shared";
+import {
+  fail,
+  oneArg,
+  randomInt,
+  readText,
+  rollChance,
+} from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
 import {
   ANIMS,
@@ -23,7 +29,7 @@ import {
   ROBBED_PREFIX,
   type Target,
 } from "common/robbery";
-import { content, core, policeOnDuty, random } from "./content";
+import { content, core, policeOnDuty } from "./content";
 import { houses } from "./houses";
 import "./truck";
 
@@ -136,7 +142,7 @@ onClientCallback(
     if (
       place.alertChance > 0 &&
       robberies.shouldAlert(place.id, place.cooldown) &&
-      Math.random() * 100 < place.alertChance
+      rollChance(place.alertChance)
     )
       dispatch.alert({
         code: "10-90",
@@ -176,7 +182,8 @@ async function rob(source: number, target: Target): Promise<void> {
       place.cooldown * 60_000,
     );
   }
-  const cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
+  const cash =
+    target.cashMax > 0 ? randomInt(target.cashMin, target.cashMax) : 0;
   if (cash > 0)
     core.AddMoney(
       source,
@@ -184,7 +191,9 @@ async function rob(source: number, target: Target): Promise<void> {
       cash,
       `robbery:${place.id}`,
     );
-  const count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
+  const count = target.reward
+    ? randomInt(target.rewardMin, target.rewardMax)
+    : 0;
   if (count > 0 && !inventory.addItem(source, target.reward, count))
     notify(source, Locale("ROB_NO_ROOM"), "warning");
   if (cash > 0) notify(source, Locale("ROB_CASH", cash), "success");
