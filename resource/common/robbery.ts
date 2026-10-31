@@ -12,10 +12,8 @@ import {
 /** ai-robberies' contracts and panel content. No natives. */
 
 export const EVENTS = {
-  /** Callback: (targetId) -> { ok, token, seconds } starts robbing a target (checks, item, police count). */
+  /** Callback: (targetId) -> { ok, entered? } starts robbing a target (checks, item, police count); the server runs the progress bar and the reward. */
   start: "ai-robberies:start",
-  /** Callback: (token) -> { ok } the progress ran out: reward, cooldown. */
-  finish: "ai-robberies:finish",
   /** Callback: () -> { ok } leaves the house the player is inside. */
   exit: "ai-robberies:exit",
   /** Server -> player: (placeId | null, to: Vec4) the player is inside this house now (or left): teleport to `to`. */
@@ -24,16 +22,12 @@ export const EVENTS = {
   truckStart: "ai-robberies:truckStart",
   /** Server -> player: (netId, x, y, z) the armored truck to rob and its rear doors. */
   truckJob: "ai-robberies:client:truckJob",
-  /** Callback: () -> { ok, token, seconds } starts planting the charge at the truck's rear doors. */
+  /** Callback: () -> { ok } plants the charge at the truck's rear doors (server-run progress; the doors blow after a fuse). */
   truckPlant: "ai-robberies:truckPlant",
-  /** Callback: (token) -> { ok } the charge is planted (the doors blow after a fuse). */
-  truckPlanted: "ai-robberies:truckPlanted",
   /** Server -> players near the truck: (netId) the rear doors are open. */
   truckOpen: "ai-robberies:client:truckOpen",
-  /** Callback: () -> { ok, token, seconds } starts grabbing the cash. */
+  /** Callback: () -> { ok } grabs the cash (server-run progress). */
   truckLoot: "ai-robberies:truckLoot",
-  /** Callback: (token) -> { ok } the cash is grabbed. */
-  truckLooted: "ai-robberies:truckLooted",
   /** Server -> players who knew the truck: () the truck job is over. */
   truckEnd: "ai-robberies:client:truckEnd",
 } as const;

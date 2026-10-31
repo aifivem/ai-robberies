@@ -4,7 +4,7 @@ Store, bank, jewelery and house robberies as panel data: places (police needed, 
 
 ## Decisions
 
-- Two-step timed action through lib `PendingActions` (robberies and the truck's plant / loot): `start` checks everything and hands a token, the client runs the progress, `finish` checks the token, the time (80%) and distance again before paying. A wrong token never cancels the running action. Who works on a target is a claim (`busy`) that counts only while that player's run is still pending.
+- Timed actions run on the server (robberies `rob`, the truck's `plant` / `loot`): the start callback checks everything and answers `{ ok }`, then lib `progressFor` runs the bar facing the target (counts after 80 % of the time; a newer start of the same player ends the older one) and distance, stock and items are checked again before paying. Who works on a target is a claim (`busy`) that counts only while that player's run is still running.
 - A robbed target is the GlobalState key `rob:<targetId>` (true while empty) cleared by a server timer after the place's cooldown; at resource start every key is reset.
 - A door target without an ai-doorlock id swings its vault map object on every client near it (`resource/client/vaults.ts`), driven by the same GlobalState key.
 - The police alert goes once per place per cooldown, on the first target of a visit.

@@ -9,12 +9,13 @@ import {
   notify,
   onClientCallback,
   optionalExport,
-  PendingActions,
+  PlayerMap,
+  progressFor,
   stateBoolean,
 } from "@aicore-fivem/lib/server";
-import { fail, oneArg, readId, readText } from "@aicore-fivem/lib/shared";
+import { fail, oneArg, readText } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { EVENTS, ROBBED_PREFIX, type Target } from "common/robbery";
+import { ANIMS, EVENTS, ROBBED_PREFIX, type Target } from "common/robbery";
 import { content, core, policeOnDuty, random } from "./content";
 import { houses } from "./houses";
 import "./truck";
@@ -29,40 +30,43 @@ for (const id of content.targets.keys())
   if (robbed.get(id) === true) robbed.set(id, false);
 
 /**
- * Robberies in progress (lib `PendingActions`: one per player, token, 80% of the time, freed on drop), who works on
- * which target, and the police alerts already sent per place.
+ * Robberies in progress (one per player, freed on drop), who works on which target, and the police alerts already
+ * sent per place.
  */
 class Robberies {
-  private readonly runs = new PendingActions<Target>();
+  private readonly runs = new PlayerMap<Target>();
   /** targetId -> the player on it and until when the claim holds. */
   private readonly busy = new Map<string, { source: number; until: number }>();
   private readonly alerted = new KeyedCooldowns<string>();
-
-  start(source: number, target: Target): number {
-    this.busy.set(target.id, {
-      source,
-      until: GetGameTimer() + target.seconds * 2000 + 15_000,
-    });
-    return this.runs.start(source, target, target.seconds * 1000);
-  }
 
   /** The target is being robbed by someone else whose run is still running and within its time. */
   taken(target: Target, source: number): boolean {
     const claim = this.busy.get(target.id);
     if (!claim || claim.source === source) return false;
     return (
-      GetGameTimer() < claim.until &&
-      this.runs.peek(claim.source)?.id === target.id
+      GetGameTimer() < claim.until && this.runs.get(claim.source) === target
     );
   }
 
-  /** The player's run for this token when enough time passed; frees the target either way. */
-  take(source: number, token: number): Target | null {
-    const target = this.runs.peek(source);
-    const done = this.runs.take(source, token);
-    if (target && this.runs.peek(source) === null)
-      if (this.busy.get(target.id)?.source === source)
-        this.busy.delete(target.id);
+  /**
+   * Claims the target and runs the server-timed progress bar facing it; true when it ran out. A newer run of the same
+   * player ends this one (false) and keeps its own claim.
+   */
+  async run(source: number, target: Target): Promise<boolean> {
+    this.busy.set(target.id, {
+      source,
+      until: GetGameTimer() + target.seconds * 2000 + 15_000,
+    });
+    this.runs.set(source, target);
+    const done = await progressFor(source, {
+      label: Locale("ROB_WORKING"),
+      duration: target.seconds * 1000,
+      anim: ANIMS[target.kind],
+      face: target.coords,
+    });
+    if (this.runs.get(source) === target) this.runs.delete(source);
+    if (this.busy.get(target.id)?.source === source)
+      this.busy.delete(target.id);
     return done;
   }
 
@@ -117,56 +121,49 @@ onClientCallback(
         icon: "sack-dollar",
         priority: "high",
       });
-    const token = robberies.start(source, target);
-    return { ok: true, token, seconds: target.seconds };
-  },
-);
-
-onClientCallback(
-  EVENTS.finish,
-  { args: oneArg(readId), lock: true },
-  (source, token) => {
-    const target = robberies.take(source, token);
-    if (!target) return fail("ROB_ERR_FAR");
-    const place = content.places.get(target.place);
-    if (!place || !isNear(source, target.coords, 3)) return fail("ROB_ERR_FAR");
-    if (robbed.get(target.id) === true) return fail("ROB_ERR_EMPTY");
-    if (
-      target.item &&
-      target.consume &&
-      !inventory.removeItem(source, target.item, 1)
-    )
-      return fail("ROB_ERR_ITEM");
-    robbed.set(target.id, true);
-    setTimeout(() => robbed.set(target.id, false), place.cooldown * 60_000);
-    if (target.kind === "entry") houses.enter(source, place);
-    if (target.kind === "door" && target.door) {
-      const doors = optionalExport("ai-doorlock");
-      doors?.SetDoorState(target.door, false);
-      setTimeout(
-        () => optionalExport("ai-doorlock")?.SetDoorState(target.door, true),
-        place.cooldown * 60_000,
-      );
-    }
-    const cash =
-      target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
-    if (cash > 0)
-      core.AddMoney(
-        source,
-        content.settings.account,
-        cash,
-        `robbery:${place.id}`,
-      );
-    const count = target.reward
-      ? random(target.rewardMin, target.rewardMax)
-      : 0;
-    if (count > 0 && !inventory.addItem(source, target.reward, count))
-      notify(source, Locale("ROB_NO_ROOM"), "warning");
-    if (cash > 0) notify(source, Locale("ROB_CASH", cash), "success");
-    aiLog("robberies", `robbed ${target.id}`, {
-      source,
-      metadata: { place: place.id, cash, reward: target.reward, count },
-    });
+    void rob(source, target);
     return { ok: true };
   },
 );
+
+/** A robbery after the start checks: the progress bar, then the loot if the player is still at the target. */
+async function rob(source: number, target: Target): Promise<void> {
+  if (!(await robberies.run(source, target))) return;
+  const place = content.places.get(target.place);
+  if (!place || !isNear(source, target.coords, 3)) return;
+  if (robbed.get(target.id) === true)
+    return notify(source, Locale("ROB_ERR_EMPTY"), "error");
+  if (
+    target.item &&
+    target.consume &&
+    !inventory.removeItem(source, target.item, 1)
+  )
+    return notify(source, Locale("ROB_ERR_ITEM"), "error");
+  robbed.set(target.id, true);
+  setTimeout(() => robbed.set(target.id, false), place.cooldown * 60_000);
+  if (target.kind === "entry") houses.enter(source, place);
+  if (target.kind === "door" && target.door) {
+    const doors = optionalExport("ai-doorlock");
+    doors?.SetDoorState(target.door, false);
+    setTimeout(
+      () => optionalExport("ai-doorlock")?.SetDoorState(target.door, true),
+      place.cooldown * 60_000,
+    );
+  }
+  const cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
+  if (cash > 0)
+    core.AddMoney(
+      source,
+      content.settings.account,
+      cash,
+      `robbery:${place.id}`,
+    );
+  const count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
+  if (count > 0 && !inventory.addItem(source, target.reward, count))
+    notify(source, Locale("ROB_NO_ROOM"), "warning");
+  if (cash > 0) notify(source, Locale("ROB_CASH", cash), "success");
+  aiLog("robberies", `robbed ${target.id}`, {
+    source,
+    metadata: { place: place.id, cash, reward: target.reward, count },
+  });
+}

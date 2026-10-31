@@ -68,10 +68,6 @@ function vec4(value, fallback) {
 	};
 }
 // ../../../packages/lib/src/shared/strict.ts
-function readInt(value, min, max) {
-	return Number.isInteger(value) && value >= min && value <= max ? value : null;
-}
-const readId = (value) => readInt(value, 1, 2147483647);
 function readText(value, max) {
 	if (typeof value != "string") return null;
 	let text = value.trim();
@@ -289,6 +285,8 @@ const CORE = {
 	clientCancelProgressEvent: "ai-core:client:cancelProgress",
 	clientDefinitionsEvent: "ai-core:client:definitions",
 	vehicleTypeCallback: "ai-core:vehicleType",
+	progressForCallback: "ai-core:progressFor",
+	progressForCancelEvent: "ai-core:client:progressForCancel",
 	interactionStateKey: "ai:interaction",
 	charactersCallback: "ai-core:characters",
 	createCharacterCallback: "ai-core:createCharacter",
@@ -1189,36 +1187,23 @@ function onCharacter(handlers) {
 		}
 	});
 }
-// ../../../packages/lib/src/server/pending.ts
-var PendingActions = class {
-	actions = new PlayerMap();
-	minRatio;
-	next = 0;
-	constructor(options = {}) {
-		this.minRatio = options.minRatio ?? .8, on(CORE.playerUnloadedEvent, (source) => this.actions.delete(source));
-	}
-	start(source, data, durationMs) {
-		return this.next = this.next >= 2147483647 ? 1 : this.next + 1, this.actions.set(source, {
-			token: this.next,
-			data,
-			startedAt: GetGameTimer(),
-			durationMs
-		}), this.next;
-	}
-	take(source, token) {
-		let action = this.actions.get(source);
-		return !action || action.token !== token ? null : (this.actions.delete(source), GetGameTimer() - action.startedAt >= action.durationMs * this.minRatio ? action.data : null);
-	}
-	peek(source) {
-		return this.actions.get(source)?.data ?? null;
-	}
-	cancel(source) {
-		this.actions.delete(source);
-	}
-	get size() {
-		return this.actions.size;
-	}
-};
+// ../../../packages/lib/src/server/progressFor.ts
+const running = new PlayerMap({ onDrop: (_source, settle) => settle(!1) });
+on(CORE.playerUnloadedEvent, (source) => {
+	let settle = running.get(source);
+	settle && settle(!1);
+});
+function progressFor(source, options) {
+	let previous = running.get(source);
+	previous && (previous(!1), emitNet(CORE.progressForCancelEvent, source));
+	let { minRatio = .8, ...bar } = options, startedAt = GetGameTimer();
+	return new Promise((resolve) => {
+		let done = !1, settle = (ok) => {
+			done || (done = !0, running.get(source) === settle && running.delete(source), resolve(ok));
+		};
+		running.set(source, settle), triggerClientCallback(CORE.progressForCallback, source, [bar], bar.duration + 15e3).then((answer) => settle(answer === !0 && GetGameTimer() - startedAt >= bar.duration * minRatio), () => settle(!1));
+	});
+}
 // ../../../packages/lib/src/server/command.ts
 const resource = GetCurrentResourceName();
 createLogger(resource), new class {
@@ -1449,16 +1434,13 @@ IsDuplicityVersion();
 // resource/common/robbery.ts
 const EVENTS = {
 	start: "ai-robberies:start",
-	finish: "ai-robberies:finish",
 	exit: "ai-robberies:exit",
 	inside: "ai-robberies:client:inside",
 	truckStart: "ai-robberies:truckStart",
 	truckJob: "ai-robberies:client:truckJob",
 	truckPlant: "ai-robberies:truckPlant",
-	truckPlanted: "ai-robberies:truckPlanted",
 	truckOpen: "ai-robberies:client:truckOpen",
 	truckLoot: "ai-robberies:truckLoot",
-	truckLooted: "ai-robberies:truckLooted",
 	truckEnd: "ai-robberies:client:truckEnd"
 }, INSIDE_META = "robbery_house", KINDS = [
 	"register",
@@ -1548,8 +1530,36 @@ function readTarget(id, v) {
 		vaultOpen: num(v.vaultOpen, 0, -720, 720)
 	};
 }
-// resource/server/schema.ts
-const robberiesSchema = {
+const ANIMS = {
+	register: {
+		dict: "oddjobs@shop_robbery@rob_till",
+		clip: "loop"
+	},
+	safe: {
+		dict: "mini@safe_cracking",
+		clip: "dial_turn_anti_fast_1"
+	},
+	locker: {
+		dict: "anim@heists@fleeca_bank@drilling",
+		clip: "drill_straight_idle"
+	},
+	vitrine: {
+		dict: "missheist_jewel",
+		clip: "smash_case"
+	},
+	door: {
+		dict: "anim@heists@ornate_bank@hack",
+		clip: "hack_loop"
+	},
+	entry: {
+		dict: "veh@break_in@0h@p_m_one@",
+		clip: "low_force_entry_ds"
+	},
+	loot: {
+		dict: "anim@gangops@facility@servers@bodysearch@",
+		clip: "player_search"
+	}
+}, robberiesSchema = {
 	title: "ADMIN_TITLE",
 	icon: "mask",
 	files: {
@@ -2345,6 +2355,16 @@ onClientCallback(EVENTS.exit, (source) => {
 	resource === ResourceName && houses.stop();
 });
 // resource/server/truck.ts
+const STEP_ANIMS = {
+	plant: {
+		dict: "anim@heists@ornate_bank@thermal_charge",
+		clip: "thermal_charge"
+	},
+	loot: {
+		dict: "anim@heists@ornate_bank@grab_cash",
+		clip: "grab"
+	}
+};
 function rearOf(vehicle) {
 	let [x = 0, y = 0, z = 0] = GetEntityCoords(vehicle), h = GetEntityHeading(vehicle) * Math.PI / 180;
 	return {
@@ -2367,7 +2387,6 @@ const truck = new class {
 		name: "truckGuards"
 	});
 	ender = null;
-	runs = new PendingActions();
 	starting = !1;
 	get active() {
 		return this.starting || this.vehicle !== 0 && DoesEntityExist(this.vehicle);
@@ -2425,11 +2444,13 @@ const truck = new class {
 	atRear(source) {
 		return this.active && isNear(source, rearOf(this.vehicle), 3);
 	}
-	start(source, kind, seconds) {
-		return this.runs.start(source, kind, seconds * 1e3);
-	}
-	take(source, token, kind) {
-		return this.runs.take(source, token) === kind && this.atRear(source);
+	async step(source, kind, seconds) {
+		return await progressFor(source, {
+			label: Locale(kind === "loot" ? "ROB_TRUCK_LOOTING" : "ROB_TRUCK_PLANTING"),
+			duration: seconds * 1e3,
+			anim: STEP_ANIMS[kind],
+			face: rearOf(this.vehicle)
+		}) && this.atRear(source);
 	}
 	get isOpen() {
 		return this.open;
@@ -2463,76 +2484,63 @@ const truck = new class {
 onClientCallback(EVENTS.truckStart, async (source) => {
 	let s = content.settings.truck;
 	return s.giver.x === 0 && s.giver.y === 0 || !isNear(source, s.giver, 3) ? fail("ROB_ERR_FAR") : truck.active ? fail("ROB_ERR_TRUCK_BUSY") : truck.waitMs > 0 ? fail("ROB_ERR_TRUCK_WAIT") : policeOnDuty() < s.minPolice ? fail("ROB_ERR_POLICE") : s.spawns.length === 0 ? fail("ROB_ERR_FAR") : core.RemoveMoney(source, s.account, s.price, "robbery:truck") ? await truck.spawn(source) ? (aiLog("robberies", "armored truck job", { source }), { ok: !0 }) : (core.AddMoney(source, s.account, s.price, "robbery:truck:refund"), fail("ROB_ERR_FAR")) : fail("ROB_ERR_MONEY");
-}, { lock: !0 }), onClientCallback(EVENTS.truckPlant, (source) => {
-	if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
-	if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
+}, { lock: !0 }), onClientCallback(EVENTS.truckPlant, (source) => !truck.atRear(source) || truck.isOpen ? fail("ROB_ERR_FAR") : truck.guardsDown() ? inventory.hasItem(source, content.settings.truck.item) ? (plant(source), { ok: !0 }) : fail("ROB_ERR_ITEM") : fail("ROB_ERR_GUARDS"), { lock: !0 });
+async function plant(source) {
 	let s = content.settings.truck;
-	return inventory.hasItem(source, s.item) ? {
-		ok: !0,
-		token: truck.start(source, "plant", s.plantSeconds),
-		seconds: s.plantSeconds
-	} : fail("ROB_ERR_ITEM");
-}, { lock: !0 }), onClientCallback(EVENTS.truckPlanted, {
-	args: oneArg(readId),
-	lock: !0
-}, (source, token) => {
-	if (!truck.take(source, token, "plant") || truck.isOpen) return fail("ROB_ERR_FAR");
+	if (await truck.step(source, "plant", s.plantSeconds) && !truck.isOpen) {
+		if (!inventory.removeItem(source, s.item, 1)) return notify(source, Locale("ROB_ERR_ITEM"), "error");
+		dispatch.alert({
+			code: "10-90",
+			title: Locale("ROB_TRUCK_ALERT"),
+			coords: coordsOf(source),
+			source,
+			icon: "truck",
+			blip: {
+				sprite: 67,
+				color: 1
+			},
+			priority: "high"
+		}), notify(source, Locale("ROB_TRUCK_FUSE"), "warning", s.fuseSeconds * 1e3), truck.blow(s.fuseSeconds * 1e3);
+	}
+}
+onClientCallback(EVENTS.truckLoot, (source) => !truck.atRear(source) || !truck.isOpen ? fail("ROB_ERR_FAR") : truck.isLooted ? fail("ROB_ERR_EMPTY") : (loot(source), { ok: !0 }), { lock: !0 });
+async function loot(source) {
 	let s = content.settings.truck;
-	return inventory.removeItem(source, s.item, 1) ? (dispatch.alert({
-		code: "10-90",
-		title: Locale("ROB_TRUCK_ALERT"),
-		coords: coordsOf(source),
-		source,
-		icon: "truck",
-		blip: {
-			sprite: 67,
-			color: 1
-		},
-		priority: "high"
-	}), notify(source, Locale("ROB_TRUCK_FUSE"), "warning", s.fuseSeconds * 1e3), truck.blow(s.fuseSeconds * 1e3), { ok: !0 }) : fail("ROB_ERR_ITEM");
-}), onClientCallback(EVENTS.truckLoot, (source) => {
-	if (!truck.atRear(source) || !truck.isOpen) return fail("ROB_ERR_FAR");
-	if (truck.isLooted) return fail("ROB_ERR_EMPTY");
-	let seconds = content.settings.truck.lootSeconds;
-	return {
-		ok: !0,
-		token: truck.start(source, "loot", seconds),
-		seconds
-	};
-}, { lock: !0 }), onClientCallback(EVENTS.truckLooted, {
-	args: oneArg(readId),
-	lock: !0
-}, (source, token) => {
-	if (!truck.take(source, token, "loot") || truck.isLooted) return fail("ROB_ERR_EMPTY");
+	if (!await truck.step(source, "loot", s.lootSeconds)) return;
+	if (truck.isLooted) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
 	truck.loot();
-	let s = content.settings.truck, cash = random(s.cashMin, s.cashMax);
-	return core.AddMoney(source, content.settings.account, cash, "robbery:truck"), notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", "armored truck looted", {
+	let cash = random(s.cashMin, s.cashMax);
+	core.AddMoney(source, content.settings.account, cash, "robbery:truck"), notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", "armored truck looted", {
 		source,
 		metadata: { cash }
-	}), { ok: !0 };
-}), on("onResourceStop", (resource) => resource === ResourceName && truck.end());
+	});
+}
+on("onResourceStop", (resource) => resource === ResourceName && truck.end());
 // resource/server/index.ts
 const robbed = new GlobalGroup("rob:", stateBoolean);
 aiLogChannels({ robberies: {} });
 const UNARMED = GetHashKey("WEAPON_UNARMED");
 for (let id of content.targets.keys()) robbed.get(id) === !0 && robbed.set(id, !1);
 const robberies = new class {
-	runs = new PendingActions();
+	runs = new PlayerMap();
 	busy = new Map();
 	alerted = new KeyedCooldowns();
-	start(source, target) {
-		return this.busy.set(target.id, {
-			source,
-			until: GetGameTimer() + target.seconds * 2e3 + 15e3
-		}), this.runs.start(source, target, target.seconds * 1e3);
-	}
 	taken(target, source) {
 		let claim = this.busy.get(target.id);
-		return !claim || claim.source === source ? !1 : GetGameTimer() < claim.until && this.runs.peek(claim.source)?.id === target.id;
+		return !claim || claim.source === source ? !1 : GetGameTimer() < claim.until && this.runs.get(claim.source) === target;
 	}
-	take(source, token) {
-		let target = this.runs.peek(source), done = this.runs.take(source, token);
-		return target && this.runs.peek(source) === null && this.busy.get(target.id)?.source === source && this.busy.delete(target.id), done;
+	async run(source, target) {
+		this.busy.set(target.id, {
+			source,
+			until: GetGameTimer() + target.seconds * 2e3 + 15e3
+		}), this.runs.set(source, target);
+		let done = await progressFor(source, {
+			label: Locale("ROB_WORKING"),
+			duration: target.seconds * 1e3,
+			anim: ANIMS[target.kind],
+			face: target.coords
+		});
+		return this.runs.get(source) === target && this.runs.delete(source), this.busy.get(target.id)?.source === source && this.busy.delete(target.id), done;
 	}
 	shouldAlert(placeId, minutes) {
 		return this.alerted.take(placeId, minutes * 6e4);
@@ -2554,26 +2562,19 @@ onClientCallback(EVENTS.start, {
 		source,
 		icon: "sack-dollar",
 		priority: "high"
-	}), {
-		ok: !0,
-		token: robberies.start(source, target),
-		seconds: target.seconds
-	});
-}), onClientCallback(EVENTS.finish, {
-	args: oneArg(readId),
-	lock: !0
-}, (source, token) => {
-	let target = robberies.take(source, token);
-	if (!target) return fail("ROB_ERR_FAR");
+	}), rob(source, target), { ok: !0 });
+});
+async function rob(source, target) {
+	if (!await robberies.run(source, target)) return;
 	let place = content.places.get(target.place);
-	if (!place || !isNear(source, target.coords, 3)) return fail("ROB_ERR_FAR");
-	if (robbed.get(target.id) === !0) return fail("ROB_ERR_EMPTY");
-	if (target.item && target.consume && !inventory.removeItem(source, target.item, 1)) return fail("ROB_ERR_ITEM");
+	if (!place || !isNear(source, target.coords, 3)) return;
+	if (robbed.get(target.id) === !0) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
+	if (target.item && target.consume && !inventory.removeItem(source, target.item, 1)) return notify(source, Locale("ROB_ERR_ITEM"), "error");
 	robbed.set(target.id, !0), setTimeout(() => robbed.set(target.id, !1), place.cooldown * 6e4), target.kind === "entry" && houses.enter(source, place), target.kind === "door" && target.door && (optionalExport("ai-doorlock")?.SetDoorState(target.door, !1), setTimeout(() => optionalExport("ai-doorlock")?.SetDoorState(target.door, !0), place.cooldown * 6e4));
 	let cash = target.cashMax > 0 ? random(target.cashMin, target.cashMax) : 0;
 	cash > 0 && core.AddMoney(source, content.settings.account, cash, `robbery:${place.id}`);
 	let count = target.reward ? random(target.rewardMin, target.rewardMax) : 0;
-	return count > 0 && !inventory.addItem(source, target.reward, count) && notify(source, Locale("ROB_NO_ROOM"), "warning"), cash > 0 && notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", `robbed ${target.id}`, {
+	count > 0 && !inventory.addItem(source, target.reward, count) && notify(source, Locale("ROB_NO_ROOM"), "warning"), cash > 0 && notify(source, Locale("ROB_CASH", cash), "success"), aiLog("robberies", `robbed ${target.id}`, {
 		source,
 		metadata: {
 			place: place.id,
@@ -2581,5 +2582,5 @@ onClientCallback(EVENTS.start, {
 			reward: target.reward,
 			count
 		}
-	}), { ok: !0 };
-});
+	});
+}

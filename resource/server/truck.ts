@@ -7,16 +7,24 @@ import {
   isNear,
   notify,
   onClientCallback,
-  PendingActions,
   playersNearEntity,
+  progressFor,
   spawnVehicle,
 } from "@aicore-fivem/lib/server";
-import { fail, oneArg, readId, waitFor } from "@aicore-fivem/lib/shared";
+import { fail, waitFor } from "@aicore-fivem/lib/shared";
 import { Locale, ResourceName } from "common";
 import { EVENTS } from "common/robbery";
 import { content, core, policeOnDuty, random } from "./content";
 
 type Step = "plant" | "loot";
+
+const STEP_ANIMS: Record<Step, { dict: string; clip: string }> = {
+  plant: {
+    dict: "anim@heists@ornate_bank@thermal_charge",
+    clip: "thermal_charge",
+  },
+  loot: { dict: "anim@heists@ornate_bank@grab_cash", clip: "grab" },
+};
 
 /** The rear doors of a truck, 4 m behind its centre. */
 function rearOf(vehicle: number): { x: number; y: number; z: number } {
@@ -45,9 +53,6 @@ class Truck {
     name: "truckGuards",
   });
   private ender: ReturnType<typeof setTimeout> | null = null;
-  /** Plant / loot progress per player (lib `PendingActions`: token, 80% of the time, freed on drop). */
-  private readonly runs = new PendingActions<Step>();
-
   /** True from the start of `spawn` until it settles: a second job cannot start meanwhile (cooldown 0 included). */
   private starting = false;
 
@@ -165,13 +170,17 @@ class Truck {
     return this.active && isNear(source, rearOf(this.vehicle), 3);
   }
 
-  start(source: number, kind: Step, seconds: number): number {
-    return this.runs.start(source, kind, seconds * 1000);
-  }
-
-  /** The player's step for this token (a wrong token leaves the running one alone), done in time and at the rear. */
-  take(source: number, token: number, kind: Step): boolean {
-    return this.runs.take(source, token) === kind && this.atRear(source);
+  /** Plants or loots with the server-timed progress bar facing the doors; true when it ran out at the rear. */
+  async step(source: number, kind: Step, seconds: number): Promise<boolean> {
+    const done = await progressFor(source, {
+      label: Locale(
+        kind === "loot" ? "ROB_TRUCK_LOOTING" : "ROB_TRUCK_PLANTING",
+      ),
+      duration: seconds * 1000,
+      anim: STEP_ANIMS[kind],
+      face: rearOf(this.vehicle),
+    });
+    return done && this.atRear(source);
   }
 
   get isOpen(): boolean {
@@ -245,66 +254,56 @@ onClientCallback(
   (source) => {
     if (!truck.atRear(source) || truck.isOpen) return fail("ROB_ERR_FAR");
     if (!truck.guardsDown()) return fail("ROB_ERR_GUARDS");
-    const s = content.settings.truck;
-    if (!inventory.hasItem(source, s.item)) return fail("ROB_ERR_ITEM");
-    return {
-      ok: true,
-      token: truck.start(source, "plant", s.plantSeconds),
-      seconds: s.plantSeconds,
-    };
+    if (!inventory.hasItem(source, content.settings.truck.item))
+      return fail("ROB_ERR_ITEM");
+    void plant(source);
+    return { ok: true };
   },
   { lock: true },
 );
 
-onClientCallback(
-  EVENTS.truckPlanted,
-  { args: oneArg(readId), lock: true },
-  (source, token) => {
-    if (!truck.take(source, token, "plant") || truck.isOpen)
-      return fail("ROB_ERR_FAR");
-    const s = content.settings.truck;
-    if (!inventory.removeItem(source, s.item, 1)) return fail("ROB_ERR_ITEM");
-    dispatch.alert({
-      code: "10-90",
-      title: Locale("ROB_TRUCK_ALERT"),
-      coords: coordsOf(source),
-      source,
-      icon: "truck",
-      blip: { sprite: 67, color: 1 },
-      priority: "high",
-    });
-    notify(source, Locale("ROB_TRUCK_FUSE"), "warning", s.fuseSeconds * 1000);
-    truck.blow(s.fuseSeconds * 1000);
-    return { ok: true };
-  },
-);
+/** The charge goes on after the progress bar; the doors blow after the fuse. */
+async function plant(source: number): Promise<void> {
+  const s = content.settings.truck;
+  if (!(await truck.step(source, "plant", s.plantSeconds)) || truck.isOpen)
+    return;
+  if (!inventory.removeItem(source, s.item, 1))
+    return notify(source, Locale("ROB_ERR_ITEM"), "error");
+  dispatch.alert({
+    code: "10-90",
+    title: Locale("ROB_TRUCK_ALERT"),
+    coords: coordsOf(source),
+    source,
+    icon: "truck",
+    blip: { sprite: 67, color: 1 },
+    priority: "high",
+  });
+  notify(source, Locale("ROB_TRUCK_FUSE"), "warning", s.fuseSeconds * 1000);
+  truck.blow(s.fuseSeconds * 1000);
+}
 
 onClientCallback(
   EVENTS.truckLoot,
   (source) => {
     if (!truck.atRear(source) || !truck.isOpen) return fail("ROB_ERR_FAR");
     if (truck.isLooted) return fail("ROB_ERR_EMPTY");
-    const seconds = content.settings.truck.lootSeconds;
-    return { ok: true, token: truck.start(source, "loot", seconds), seconds };
+    void loot(source);
+    return { ok: true };
   },
   { lock: true },
 );
 
-onClientCallback(
-  EVENTS.truckLooted,
-  { args: oneArg(readId), lock: true },
-  (source, token) => {
-    if (!truck.take(source, token, "loot") || truck.isLooted)
-      return fail("ROB_ERR_EMPTY");
-    truck.loot();
-    const s = content.settings.truck;
-    const cash = random(s.cashMin, s.cashMax);
-    core.AddMoney(source, content.settings.account, cash, "robbery:truck");
-    notify(source, Locale("ROB_CASH", cash), "success");
-    aiLog("robberies", "armored truck looted", { source, metadata: { cash } });
-    return { ok: true };
-  },
-);
+/** The cash after the progress bar, once per truck (the first player to finish takes it). */
+async function loot(source: number): Promise<void> {
+  const s = content.settings.truck;
+  if (!(await truck.step(source, "loot", s.lootSeconds))) return;
+  if (truck.isLooted) return notify(source, Locale("ROB_ERR_EMPTY"), "error");
+  truck.loot();
+  const cash = random(s.cashMin, s.cashMax);
+  core.AddMoney(source, content.settings.account, cash, "robbery:truck");
+  notify(source, Locale("ROB_CASH", cash), "success");
+  aiLog("robberies", "armored truck looted", { source, metadata: { cash } });
+}
 
 on(
   "onResourceStop",

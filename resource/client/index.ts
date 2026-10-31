@@ -6,11 +6,10 @@ import {
   onServerEvent,
   player,
   Points,
-  progress,
 } from "@aicore-fivem/lib/client";
 import { readVec4, type Vec4 } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { ANIMS, EVENTS } from "common/robbery";
+import { EVENTS } from "common/robbery";
 import { content, FALLBACK, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
@@ -72,19 +71,8 @@ class Spots {
   async rob(id: string): Promise<void> {
     const target = content.targets.get(id);
     if (!target) return;
-    const started = await callAction(EVENTS.start, [id], FALLBACK);
-    if (!started || started.entered === true) return;
-    if (
-      typeof started.token !== "number" ||
-      typeof started.seconds !== "number"
-    )
-      return;
-    const done = await progress({
-      label: Locale("ROB_WORKING"),
-      duration: started.seconds * 1000,
-      anim: ANIMS[target.kind],
-    });
-    if (done) await callAction(EVENTS.finish, [started.token], FALLBACK);
+    // The server runs the progress bar and hands out the loot.
+    await callAction(EVENTS.start, [id], FALLBACK);
   }
 
   /** The screen goes black first; the server's `inside` event teleports and lifts the fade. */

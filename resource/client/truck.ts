@@ -4,7 +4,6 @@ import {
   notify,
   onServerEvent,
   Points,
-  progress,
 } from "@aicore-fivem/lib/client";
 import { oneArg, readFinite, readId } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
@@ -89,35 +88,11 @@ class TruckJob {
     if (ok) notify(Locale("ROB_TRUCK_STARTED"), "info", 8000);
   }
 
-  /** Plant or loot, whichever the doors allow now: two-step timed action. */
+  /** Plant or loot, whichever the doors allow now; the server runs the progress bar. */
   async rear(): Promise<void> {
-    const loot = this.open;
-    const started = await callAction(
-      loot ? EVENTS.truckLoot : EVENTS.truckPlant,
-      [],
-      FALLBACK,
-    );
-    if (
-      !started ||
-      typeof started.token !== "number" ||
-      typeof started.seconds !== "number"
-    )
-      return;
-    const anim = loot
-      ? { dict: "anim@heists@ornate_bank@grab_cash", clip: "grab" }
-      : {
-          dict: "anim@heists@ornate_bank@thermal_charge",
-          clip: "thermal_charge",
-        };
-    const done = await progress({
-      label: Locale(loot ? "ROB_TRUCK_LOOTING" : "ROB_TRUCK_PLANTING"),
-      duration: started.seconds * 1000,
-      anim,
-    });
-    if (!done) return;
     await callAction(
-      loot ? EVENTS.truckLooted : EVENTS.truckPlanted,
-      [started.token],
+      this.open ? EVENTS.truckLoot : EVENTS.truckPlant,
+      [],
       FALLBACK,
     );
   }
