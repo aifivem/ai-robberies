@@ -2,6 +2,7 @@ import {
   aiLog,
   aiLogChannels,
   dispatch,
+  doors,
   GlobalGroup,
   inventory,
   isNear,
@@ -9,7 +10,6 @@ import {
   minigameFor,
   notify,
   onClientCallback,
-  optionalExport,
   PlayerMap,
   progressFor,
   stateBoolean,
@@ -175,12 +175,9 @@ async function rob(source: number, target: Target): Promise<void> {
   setTimeout(() => robbed.set(target.id, false), place.cooldown * 60_000);
   if (target.kind === "entry") houses.enter(source, place);
   if (target.kind === "door" && target.door) {
-    const doors = optionalExport("ai-doorlock");
-    doors?.SetDoorState(target.door, false);
-    setTimeout(
-      () => optionalExport("ai-doorlock")?.SetDoorState(target.door, true),
-      place.cooldown * 60_000,
-    );
+    const door = target.door;
+    doors.setLocked(door, false, source);
+    setTimeout(() => doors.setLocked(door, true), place.cooldown * 60_000);
   }
   const cash =
     target.cashMax > 0 ? randomInt(target.cashMin, target.cashMax) : 0;
