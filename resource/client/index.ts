@@ -7,9 +7,9 @@ import {
   player,
   Points,
 } from "@aicore-fivem/lib/client";
-import { readVec4, type Vec4 } from "@aicore-fivem/lib/shared";
+import { readVec4, RecordObjects, type Vec4 } from "@aicore-fivem/lib/shared";
 import { Locale } from "common";
-import { EVENTS } from "common/robbery";
+import { EVENTS, readPlace, readTarget, type Target } from "common/robbery";
 import { content, FALLBACK, world } from "./content";
 import "./truck";
 import { Vaults } from "./vaults";
@@ -17,23 +17,58 @@ import { Vaults } from "./vaults";
 import { robbed } from "./robbed";
 
 /**
- * A point at every target ("Rob" or "Emptied" from its GlobalState key) and the places' blips. Targets inside a
- * house only exist while the player is inside it, together with its exit point.
+ * A point at every target ("Rob" or "Emptied" from its GlobalState key), the vault zones of door targets and the
+ * places' blips, each kept per record: one edited target rebuilds only its own point and zone, one edited place only
+ * its blip and its own targets. Targets inside a house only exist while the player is inside it, together with its
+ * exit point.
  */
 class Spots {
   readonly points = new Points();
   private readonly blips = new Blips();
-  insideId: string | null = null;
+  private readonly vaults = new Vaults();
+  private insideId: string | null = null;
+  /** Target ids per place (every target, shown or not), for the targets of one place. */
+  private readonly byPlace = new Map<string, Set<string>>();
+  /** Built after the maps above: `RecordObjects` builds at once. */
+  readonly targets = new RecordObjects(
+    world,
+    "targets",
+    readTarget,
+    (id, target) => this.addTarget(id, target),
+  );
+  private readonly places = new RecordObjects(
+    world,
+    "places",
+    readPlace,
+    (id, place) => {
+      if (!place.blip) return;
+      this.blips.add(id, {
+        ...content.settings.blip,
+        coords: place.coords,
+        label: place.label,
+      });
+      return () => this.blips.remove(id);
+    },
+  );
 
-  rebuild(): void {
-    this.points.clear();
-    this.blips.clear();
-    for (const target of content.targets.values()) {
-      const id = target.id;
-      const house =
-        content.places.get(target.place)?.interior != null &&
-        target.kind !== "entry";
-      if (house !== (this.insideId === target.place)) continue;
+  constructor() {
+    // A place's interior decides where its targets show; the blip look is a setting every place reads.
+    world.onChange("places", (key) =>
+      key === undefined ? this.targets.rebuildAll() : this.rebuildPlace(key),
+    );
+    world.onChange("settings", () => this.places.rebuildAll());
+  }
+
+  private addTarget(id: string, target: Target): () => void {
+    let ids = this.byPlace.get(target.place);
+    if (!ids) this.byPlace.set(target.place, (ids = new Set()));
+    ids.add(id);
+    this.vaults.add(target);
+    const house =
+      content.places.get(target.place)?.interior != null &&
+      target.kind !== "entry";
+    const shown = house === (this.insideId === target.place);
+    if (shown)
       this.points.add(id, {
         coords: target.coords,
         radius: 1.2,
@@ -46,10 +81,29 @@ class Spots {
         icon: "mask",
         onPressed: () => this.rob(id),
       });
-    }
-    const inside = this.insideId
-      ? content.places.get(this.insideId)?.interior
-      : null;
+    return () => {
+      if (shown) this.points.remove(id);
+      this.vaults.remove(id);
+      ids.delete(id);
+      if (ids.size === 0) this.byPlace.delete(target.place);
+    };
+  }
+
+  /** The targets of one place again (its interior changed, or the player entered / left it). */
+  private rebuildPlace(placeId: string): void {
+    // A copy: each rebuild takes the id out of the set and puts it back (a live Set would visit it again).
+    const ids = Array.from(this.byPlace.get(placeId) ?? []);
+    for (const id of ids) this.targets.rebuild(id);
+  }
+
+  /** The player entered a house (`id`) or left one (null): the targets of both and the exit point follow. */
+  setInside(id: string | null): void {
+    const was = this.insideId;
+    this.insideId = id;
+    if (was !== null) this.rebuildPlace(was);
+    if (id !== null && id !== was) this.rebuildPlace(id);
+    this.points.remove("exit");
+    const inside = id ? content.places.get(id)?.interior : null;
     if (inside)
       this.points.add("exit", {
         coords: inside,
@@ -59,18 +113,16 @@ class Spots {
         interval: 300,
         onPressed: () => this.exit(),
       });
-    for (const place of content.places.values())
-      if (place.blip)
-        this.blips.add(place.id, {
-          ...content.settings.blip,
-          coords: place.coords,
-          label: place.label,
-        });
+  }
+
+  /** A changed `rob:<id>` key. */
+  robbedChanged(id: string, value: boolean): void {
+    this.vaults.changed(id, value);
+    this.points.refresh();
   }
 
   async rob(id: string): Promise<void> {
-    const target = content.targets.get(id);
-    if (!target) return;
+    if (!this.targets.records.has(id)) return;
     // The server runs the progress bar and hands out the loot.
     await callAction(EVENTS.start, [id], FALLBACK);
   }
@@ -83,19 +135,7 @@ class Spots {
 }
 
 const spots = new Spots();
-const vaults = new Vaults();
-spots.rebuild();
-vaults.rebuild(content.targets.values());
-robbed.onChange((id, value) => {
-  vaults.changed(id, value === true);
-  spots.points.refresh();
-});
-world.onChange("places", () => spots.rebuild());
-world.onChange("settings", () => spots.rebuild());
-world.onChange("targets", () => {
-  spots.rebuild();
-  vaults.rebuild(content.targets.values());
-});
+robbed.onChange((id, value) => spots.robbedChanged(id, value === true));
 
 onServerEvent(
   EVENTS.inside,
@@ -109,8 +149,7 @@ onServerEvent(
     },
   },
   (id, to) => {
-    spots.insideId = id;
-    spots.rebuild();
+    spots.setInside(id);
     void player.teleport(to, { heading: to.heading });
   },
 );

@@ -10,21 +10,23 @@ export class Vaults {
   private readonly zones = new Zones();
   private readonly near = new Map<string, Target>();
 
-  rebuild(targets: Iterable<Target>): void {
-    this.zones.clear();
-    this.near.clear();
-    for (const target of targets) {
-      if (target.kind !== "door" || target.door || !target.vaultModel) continue;
-      this.zones.add(target.id, {
-        shape: { type: "sphere", center: target.coords, radius: 40 },
-        interval: 1000,
-        onEnter: () => {
-          this.near.set(target.id, target);
-          this.apply(target, robbed.get(target.id) === true);
-        },
-        onExit: () => this.near.delete(target.id),
-      });
-    }
+  /** The vault zone of a door target that swings a map object (other targets have none). */
+  add(target: Target): void {
+    if (target.kind !== "door" || target.door || !target.vaultModel) return;
+    this.zones.add(target.id, {
+      shape: { type: "sphere", center: target.coords, radius: 40 },
+      interval: 1000,
+      onEnter: () => {
+        this.near.set(target.id, target);
+        this.apply(target, robbed.get(target.id) === true);
+      },
+      onExit: () => this.near.delete(target.id),
+    });
+  }
+
+  /** Removes a target's vault zone (its exit fires when the player is near). */
+  remove(id: string): void {
+    this.zones.remove(id);
   }
 
   /** A changed `rob:<id>` key of a vault the player is near. */
