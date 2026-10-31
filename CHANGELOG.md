@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/aifivem/ai-robberies/compare/v0.2.0...v0.2.1) (2026-10-31)
+
+
+### Miscellaneous Chores
+
+* rebuild with the current lib ([3ccdf2c](https://github.com/aifivem/ai-robberies/commit/3ccdf2c7ec9c454ee2030521ca7d5b23cdd6eeb3))
+
 ## [0.2.0](https://github.com/aifivem/ai-robberies/compare/v0.1.0...v0.2.0) (2026-10-31)
 
 
