@@ -1,13 +1,8 @@
-import {
-  buckets,
-  isNear,
-  onCharacter,
-  onClientCallback,
-  onStop,
-} from "@aicore-fivem/lib/server";
-import { fail, type Vec4 } from "@aicore-fivem/lib/shared";
-import { EVENTS, INSIDE_META, type Place } from "common/robbery";
-import { content, core } from "./content";
+import { buckets } from "@aicore-fivem/lib/server";
+import type { Vec4 } from "@aicore-fivem/lib/shared";
+import type { Place } from "common/places";
+import { EVENTS, INSIDE_META } from "common/robbery";
+import { content, core } from "../content";
 
 /**
  * Robbers inside houses. Each occupied house is its own routing bucket from lib `buckets` (taken when the first robber
@@ -92,19 +87,3 @@ class Houses {
 }
 
 export const houses = new Houses();
-
-onClientCallback(
-  EVENTS.exit,
-  (source) => {
-    const place = content.places.get(houses.insideOf(source) ?? "");
-    if (!place?.interior || !isNear(source, place.interior, 3))
-      return fail("ROB_ERR_FAR");
-    return houses.exit(source) ? { ok: true } : fail("ROB_ERR_FAR");
-  },
-  { lock: true },
-);
-onCharacter({
-  loaded: (source) => houses.rejoin(source),
-  unloaded: (source) => houses.forget(source),
-});
-onStop(() => houses.stop());

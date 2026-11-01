@@ -1,5 +1,5 @@
 import { Zones } from "@aicore-fivem/lib/client";
-import type { Target } from "common/robbery";
+import type { Target } from "common/targets";
 import { robbed } from "./robbed";
 
 /**

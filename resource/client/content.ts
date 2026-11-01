@@ -1,7 +1,8 @@
 import { AdminWorld } from "@aicore-fivem/lib/client";
-import { readPlace, readSettings } from "common/robbery";
+import { readPlace } from "common/places";
+import { readSettings } from "common/settings";
 
-/** The panel files every client module reads, kept current by the panel's views (targets: `index.ts`). */
+/** The panel files every client module reads, kept current by the panel's views (targets: `spots/spots.ts`). */
 export const world = new AdminWorld(["settings", "places", "targets"]);
 const settings = world.view("settings", readSettings);
 export const content = {

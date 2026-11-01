@@ -451,7 +451,7 @@ var ClientGate = class {
 	}
 };
 // ../../../packages/lib/src/server/callback.ts
-const log$5 = createLogger(GetCurrentResourceName()), resource$1 = GetCurrentResourceName(), REFUSED = Symbol("refused");
+const log$5 = createLogger(GetCurrentResourceName()), resource$2 = GetCurrentResourceName(), REFUSED = Symbol("refused");
 function onClientCallback(name, first, second) {
 	let [handler, options] = typeof first == "function" ? [first, second ?? {}] : [second, first], gate = new ClientGate(name, options, 20);
 	onNet(requestEvent(name), async (caller, id, ...raw) => {
@@ -469,7 +469,7 @@ function onClientCallback(name, first, second) {
 }
 const pending = new Map();
 let nextId = 0;
-onNet(responseEvent(resource$1), (id, ok, result) => {
+onNet(responseEvent(resource$2), (id, ok, result) => {
 	let entry = typeof id == "number" ? pending.get(id) : void 0;
 	entry && entry.source === Number(globalThis.source) && (pending.delete(id), clearTimeout(entry.timer), ok === !0 ? entry.resolve(result) : entry.reject(Error("client callback failed")));
 });
@@ -484,7 +484,7 @@ function triggerClientCallback(name, source, args = [], timeoutMs = 3e4) {
 			resolve,
 			reject,
 			timer
-		}), emitNet(requestEvent(name), source, resource$1, id, ...args);
+		}), emitNet(requestEvent(name), source, resource$2, id, ...args);
 	});
 }
 // ../../../packages/lib/src/server/admin/patch.ts
@@ -529,7 +529,7 @@ function toPatch(value) {
 		default: return null;
 	}
 }
-const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(value)), core$26 = resourceExport(CORE.resource), ERR = {
+const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(value)), core$27 = resourceExport(CORE.resource), ERR = {
 	type: "ADMIN_ERR_TYPE",
 	range: "ADMIN_ERR_RANGE",
 	length: "ADMIN_ERR_LENGTH",
@@ -543,7 +543,7 @@ const clone = (value) => value === void 0 ? value : JSON.parse(JSON.stringify(va
 		if (cached && Date.now() - cached.at < 2e3) return cached.values.size > 0 ? cached.values : null;
 		let list = [];
 		try {
-			list = core$26.GetLookupValues(source);
+			list = core$27.GetLookupValues(source);
 		} catch {}
 		let values = new Set(Array.isArray(list) ? list.filter((v) => typeof v == "string") : []);
 		return this.lists.set(source, {
@@ -672,11 +672,7 @@ function applyEdit(data, patch, spec) {
 	}
 	return [spec.kind === "records" ? patch.key : void 0];
 }
-// ../../../packages/lib/src/server/admin/jsonSchema.ts
-const SCHEMA_KEY = {
-	type: "string",
-	description: "This file's JSON Schema (for editors)."
-};
+// ../../../packages/lib/src/server/admin/descriptions.ts
 function langFile(resource) {
 	try {
 		let raw = JSON.parse(LoadResourceFile(resource, "locales/en.json") ?? "{}");
@@ -703,6 +699,11 @@ function describe(schema, file, lang) {
 	for (let tab of schema.tabs) if (tab.file === file) for (let card of tab.cards) collect(card.fields, "", lang, out);
 	return out;
 }
+// ../../../packages/lib/src/server/admin/jsonSchema.ts
+const SCHEMA_KEY = {
+	type: "string",
+	description: "This file's JSON Schema (for editors)."
+};
 function toJson(spec, path, desc) {
 	let description = desc.get(path), base = description ? { description } : {};
 	switch (spec.type) {
@@ -807,27 +808,20 @@ function writeSchema(resource, name, text, log) {
 	let dir = `${GetResourcePath(resource)}/data/schemas`;
 	(0, node_fs_promises.mkdir)(dir, { recursive: !0 }).then(() => (0, node_fs_promises.writeFile)(`${dir}/${name}.schema.json`, text, "utf8")).catch((error) => log.error(`writing ${resource}/${path} failed`, error));
 }
-// ../../../packages/lib/src/server/admin/panel.ts
-const core$25 = resourceExport(CORE.resource);
-var AdminPanel = class {
+// ../../../packages/lib/src/server/admin/panelFiles.ts
+const core$26 = resourceExport(CORE.resource);
+var PanelFiles = class {
 	schema;
 	data = new Map();
 	dataFiles = new Map();
 	handlers = new Map();
-	rules = new Map();
-	actions = new Map();
 	views = new FileViews((file) => this.get(file));
 	worldChanges = new Map();
 	resource = GetCurrentResourceName();
 	log = createLogger(this.resource);
-	editor = 0;
 	constructor(schema) {
 		this.schema = schema;
 		for (let [name, spec] of Object.entries(schema.files)) this.load(name, spec);
-		registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelData", () => this.dataSnapshot()), registerExport("AdminPanelSummary", () => this.summary()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges), { rate: {
-			count: 4,
-			windowMs: 1e4
-		} }), setImmediate(() => core$25.RegisterAdminPanel(this.resource));
 	}
 	get(file) {
 		return this.data.get(file) ?? {};
@@ -835,17 +829,68 @@ var AdminPanel = class {
 	onChange(file, handler) {
 		this.handlers.set(file, [...this.handlers.get(file) ?? [], handler]);
 	}
-	rule(file, rule) {
-		this.rules.set(file, rule);
-	}
-	onAction(id, handler) {
-		this.actions.set(id, handler);
-	}
 	view(file, read) {
 		return this.views.view(file, read);
 	}
 	records(file, readOne) {
 		return this.views.records(file, readOne);
+	}
+	commit(file, key, value) {
+		let data = this.data.get(file);
+		data && (key === void 0 ? isRecord(value) && this.data.set(file, clone(value)) : value === null ? delete data[key] : data[key] = clone(value), this.changed(file, key));
+	}
+	commitAfter(file, key, value) {
+		setImmediate(() => this.commit(file, key, value));
+	}
+	store(patch, spec) {
+		let data = this.data.get(patch.file) ?? {}, keys = applyEdit(data, patch, spec);
+		if (keys.length !== 0) {
+			this.data.set(patch.file, data);
+			for (let key of keys) this.changed(patch.file, key);
+		}
+	}
+	changed(file, key) {
+		let spec = this.schema.files[file], data = this.get(file), value = key === void 0 ? data : data[key] ?? null;
+		this.dataFiles.get(file)?.write(data), this.views.changed(file, key, value);
+		for (let handler of this.handlers.get(file) ?? []) handler(key, value);
+		if (core$26.AdminPanelChanged({
+			resource: this.resource,
+			file,
+			key,
+			value: clone(value)
+		}), spec?.sync !== "all") return;
+		let changes = this.worldChanges.get(file) ?? {};
+		changes[key ?? ""] = clone(value), this.worldChanges.set(file, changes), emitNet(ADMIN.worldEvent(this.resource), -1, file, key ?? null, value);
+	}
+	load(name, spec) {
+		if (spec.memory) {
+			this.data.set(name, {});
+			return;
+		}
+		let file = new DataFile(this.resource, name, this.log);
+		this.dataFiles.set(name, file), file.schemaRef = `./schemas/${name}.schema.json`, writeSchema(this.resource, name, fileSchema(this.resource, this.schema, name, spec), this.log);
+		let raw = file.read(), data = isRecord(raw) ? raw : {}, filled = !1;
+		if (spec.kind === "settings") for (let [section, value] of Object.entries(spec.defaults ?? {})) section in data || (data[section] = clone(value), filled = !0);
+		this.data.set(name, data), (filled || raw === null || !file.hasSchemaRef()) && file.write(data);
+	}
+};
+// ../../../packages/lib/src/server/admin/panel.ts
+const core$25 = resourceExport(CORE.resource);
+var AdminPanel = class extends PanelFiles {
+	rules = new Map();
+	actions = new Map();
+	editor = 0;
+	constructor(schema) {
+		super(schema), registerExport("AdminPanelSnapshot", () => this.snapshot()), registerExport("AdminPanelData", () => this.dataSnapshot()), registerExport("AdminPanelSummary", () => this.summary()), registerExport("AdminPanelApply", (admin, patch) => this.apply(admin, patch)), onClientCallback(ADMIN.worldChangesCallback(this.resource), () => Object.fromEntries(this.worldChanges), { rate: {
+			count: 4,
+			windowMs: 1e4
+		} }), setImmediate(() => core$25.RegisterAdminPanel(this.resource));
+	}
+	rule(file, rule) {
+		this.rules.set(file, rule);
+	}
+	onAction(id, handler) {
+		this.actions.set(id, handler);
 	}
 	snapshot() {
 		return {
@@ -923,44 +968,6 @@ var AdminPanel = class {
 			};
 		}
 	}
-	commit(file, key, value) {
-		let data = this.data.get(file);
-		data && (key === void 0 ? isRecord(value) && this.data.set(file, clone(value)) : value === null ? delete data[key] : data[key] = clone(value), this.changed(file, key));
-	}
-	commitAfter(file, key, value) {
-		setImmediate(() => this.commit(file, key, value));
-	}
-	store(patch, spec) {
-		let data = this.data.get(patch.file) ?? {}, keys = applyEdit(data, patch, spec);
-		if (keys.length !== 0) {
-			this.data.set(patch.file, data);
-			for (let key of keys) this.changed(patch.file, key);
-		}
-	}
-	changed(file, key) {
-		let spec = this.schema.files[file], data = this.get(file), value = key === void 0 ? data : data[key] ?? null;
-		this.dataFiles.get(file)?.write(data), this.views.changed(file, key, value);
-		for (let handler of this.handlers.get(file) ?? []) handler(key, value);
-		if (core$25.AdminPanelChanged({
-			resource: this.resource,
-			file,
-			key,
-			value: clone(value)
-		}), spec?.sync !== "all") return;
-		let changes = this.worldChanges.get(file) ?? {};
-		changes[key ?? ""] = clone(value), this.worldChanges.set(file, changes), emitNet(ADMIN.worldEvent(this.resource), -1, file, key ?? null, value);
-	}
-	load(name, spec) {
-		if (spec.memory) {
-			this.data.set(name, {});
-			return;
-		}
-		let file = new DataFile(this.resource, name, this.log);
-		this.dataFiles.set(name, file), file.schemaRef = `./schemas/${name}.schema.json`, writeSchema(this.resource, name, fileSchema(this.resource, this.schema, name, spec), this.log);
-		let raw = file.read(), data = isRecord(raw) ? raw : {}, filled = !1;
-		if (spec.kind === "settings") for (let [section, value] of Object.entries(spec.defaults ?? {})) section in data || (data[section] = clone(value), filled = !0);
-		this.data.set(name, data), (filled || raw === null || !file.hasSchemaRef()) && file.write(data);
-	}
 };
 function labelOf(record, path) {
 	if (!path) return null;
@@ -1017,7 +1024,7 @@ function reindex(index, source, before, after) {
 		set || index.set(name, set = new Set()), set.add(source);
 	}
 }
-var OnlinePlayers = class {
+var OnlineMirror = class {
 	players = new Map();
 	onDuty = new Map();
 	jobIndex = new Map();
@@ -1069,6 +1076,7 @@ var OnlinePlayers = class {
 		let set = this.onDuty.get(job);
 		set || this.onDuty.set(job, set = new Set()), set.add(source);
 	}
+}, OnlinePlayers = class extends OnlineMirror {
 	sources() {
 		return this.start(), this.players.keys();
 	}
@@ -1138,10 +1146,6 @@ const EMPTY = new Set(), online = new OnlinePlayers(), core$22 = resourceExport(
 	give: (source, vehicle, purpose = "temporary") => core$22.GiveVehicleKeys(source, vehicle, purpose),
 	remove: (source, vehicle) => core$22.RemoveVehicleKeys(source, vehicle),
 	has: (source, vehicle) => core$22.HasVehicleKeys(source, vehicle)
-}, core$21 = resourceExport(CORE.resource), fuel = {
-	get: (vehicle) => core$21.GetVehicleFuel(vehicle),
-	set: (vehicle, level) => core$21.SetVehicleFuel(vehicle, level),
-	provider: () => core$21.GetFuelSystem()
 }, TYPES = new Set([
 	"automobile",
 	"bike",
@@ -1160,14 +1164,12 @@ async function vehicleType(model, asker) {
 	let seen = votes.get(hash) ?? new Map(), first = seen.get(answer);
 	return first !== void 0 && first !== asker ? (types.set(hash, answer), votes.delete(hash)) : (seen.set(answer, asker), votes.set(hash, seen)), answer;
 }
-async function seatPlayer(vehicle, source, seat) {
-	let ped = GetPlayerPed(String(source));
-	return ped ? waitFor(() => {
-		if (!DoesEntityExist(vehicle)) return !1;
-		if (GetPedInVehicleSeat(vehicle, seat) === ped) return !0;
-		SetPedIntoVehicle(ped, vehicle, seat);
-	}, 2e3, 150).catch(() => !1) : !1;
-}
+// ../../../packages/lib/src/server/fuel.ts
+const core$21 = resourceExport(CORE.resource), fuel = {
+	get: (vehicle) => core$21.GetVehicleFuel(vehicle),
+	set: (vehicle, level) => core$21.SetVehicleFuel(vehicle, level),
+	provider: () => core$21.GetFuelSystem()
+};
 function randomPlate(prefix) {
 	let digit = () => String(Math.floor(Math.random() * 10));
 	if (prefix !== void 0) {
@@ -1177,6 +1179,15 @@ function randomPlate(prefix) {
 	}
 	let letter = () => "ABCDEFGHJKLMNPRSTUVWXYZ"[Math.floor(Math.random() * 23)] ?? "A";
 	return `${digit()}${digit()}${letter()}${letter()}${letter()}${digit()}${digit()}${digit()}`;
+}
+// ../../../packages/lib/src/server/vehicle/spawn.ts
+async function seatPlayer(vehicle, source, seat) {
+	let ped = GetPlayerPed(String(source));
+	return ped ? waitFor(() => {
+		if (!DoesEntityExist(vehicle)) return !1;
+		if (GetPedInVehicleSeat(vehicle, seat) === ped) return !0;
+		SetPedIntoVehicle(ped, vehicle, seat);
+	}, 2e3, 150).catch(() => !1) : !1;
 }
 async function spawnVehicle(options) {
 	let type = options.asker === void 0 ? options.type ?? "automobile" : await vehicleType(options.model, options.asker);
@@ -1348,9 +1359,10 @@ async function minigameFor(source, options) {
 	}, startedAt = GetGameTimer(), answer = await triggerClientCallback(LIB_UI.minigameForCallback, source, [request], 12e4).catch(() => null);
 	return answer === !0 || answer === "opened" ? GetGameTimer() - startedAt < (options.minMs ?? 0) ? "lost" : "won" : answer === "broken" ? "broken" : "lost";
 }
-// ../../../packages/lib/src/server/command.ts
+createLogger(GetCurrentResourceName());
+// ../../../packages/lib/src/server/command/commandSet.ts
 const resource = GetCurrentResourceName();
-createLogger(resource), new class {
+new class {
 	list = [];
 	sent = new Map();
 	announced = 0;
@@ -1393,47 +1405,8 @@ function onStop(fn) {
 		resource === self && fn();
 	});
 }
-let log = null;
-var ScheduledJob = class {
-	interval;
-	fn;
-	name;
-	gen = 0;
-	active = !1;
-	stopped = !1;
-	quietUntil = 0;
-	skipped = 0;
-	constructor(interval, fn, name) {
-		this.interval = interval, this.fn = fn, this.name = name;
-	}
-	get running() {
-		return this.active;
-	}
-	set(active) {
-		active === this.active || active && this.stopped || (this.active = active, active ? scheduler.activate(this) : scheduler.deactivate(this));
-	}
-	stop() {
-		this.set(!1), this.stopped = !0;
-	}
-	call() {
-		try {
-			let result = this.fn();
-			result instanceof Promise && result.catch((error) => this.fail(error));
-		} catch (error) {
-			this.fail(error);
-		}
-	}
-	fail(error) {
-		let now = GetGameTimer();
-		if (now < this.quietUntil) {
-			this.skipped++;
-			return;
-		}
-		this.quietUntil = now + 1e4;
-		let more = this.skipped ? ` (+${this.skipped} more)` : "";
-		this.skipped = 0, log ??= createLogger(GetCurrentResourceName()), log.error(`job "${this.name}" failed${more}`, error instanceof Error ? error.stack ?? error.message : error);
-	}
-}, Group = class {
+// ../../../packages/lib/src/fivem/scheduler/group.ts
+var Group = class {
 	interval;
 	jobs = Array(8);
 	gens = Array(8).fill(0);
@@ -1519,13 +1492,53 @@ const scheduler = new class {
 		groups.length = kept, this.nextDue = soonest;
 	};
 }();
+let log = null;
+var ScheduledJob = class {
+	interval;
+	fn;
+	name;
+	gen = 0;
+	active = !1;
+	stopped = !1;
+	quietUntil = 0;
+	skipped = 0;
+	constructor(interval, fn, name) {
+		this.interval = interval, this.fn = fn, this.name = name;
+	}
+	get running() {
+		return this.active;
+	}
+	set(active) {
+		active === this.active || active && this.stopped || (this.active = active, active ? scheduler.activate(this) : scheduler.deactivate(this));
+	}
+	stop() {
+		this.set(!1), this.stopped = !0;
+	}
+	call() {
+		try {
+			let result = this.fn();
+			result instanceof Promise && result.catch((error) => this.fail(error));
+		} catch (error) {
+			this.fail(error);
+		}
+	}
+	fail(error) {
+		let now = GetGameTimer();
+		if (now < this.quietUntil) {
+			this.skipped++;
+			return;
+		}
+		this.quietUntil = now + 1e4;
+		let more = this.skipped ? ` (+${this.skipped} more)` : "";
+		this.skipped = 0, log ??= createLogger(GetCurrentResourceName()), log.error(`job "${this.name}" failed${more}`, error instanceof Error ? error.stack ?? error.message : error);
+	}
+};
 function every(ms, fn, options = {}) {
 	let job = new ScheduledJob(Math.max(0, Math.floor(ms)), fn, options.name ?? (fn.name || "anonymous"));
 	return options.active !== !1 && job.set(!0), job;
 }
-// ../../../packages/lib/src/fivem/state.ts
+// ../../../packages/lib/src/fivem/state/mirror.ts
 const stateBoolean = (v) => typeof v == "boolean" ? v : void 0;
-IsDuplicityVersion();
 var Mirror = class {
 	key;
 	parse;
@@ -1545,6 +1558,8 @@ var Mirror = class {
 		if (this.values.set(id, value), old !== value) for (let listener of this.listeners) listener(id, value, old);
 	}
 };
+IsDuplicityVersion();
+// ../../../packages/lib/src/fivem/state/globalState.ts
 const prefixListeners = new Map();
 let prefixHandler = !1;
 function listenPrefix(prefix, listener) {
@@ -1574,7 +1589,10 @@ var GlobalGroup$1 = class extends Mirror {
 	ids() {
 		return this.values.keys();
 	}
-}, GlobalGroup = class extends GlobalGroup$1 {
+};
+IsDuplicityVersion();
+// ../../../packages/lib/src/server/state.ts
+var GlobalGroup = class extends GlobalGroup$1 {
 	set(id, value) {
 		GlobalState.set(this.prefix + id, value ?? null, !0), this.put(id, value);
 	}
@@ -1596,29 +1614,8 @@ const core$5 = resourceExport(CORE.resource), doors = {
 	provider: () => core$5.GetDoorlockSystem()
 };
 resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource), resourceExport(CORE.resource);
-// resource/common/locale.ts
-const Locale = createLocale();
-GetCurrentResourceName(), IsDuplicityVersion();
-// resource/common/robbery.ts
-const EVENTS = {
-	start: "ai-robberies:start",
-	exit: "ai-robberies:exit",
-	inside: "ai-robberies:client:inside",
-	truckStart: "ai-robberies:truckStart",
-	truckJob: "ai-robberies:client:truckJob",
-	truckPlant: "ai-robberies:truckPlant",
-	truckOpen: "ai-robberies:client:truckOpen",
-	truckLoot: "ai-robberies:truckLoot",
-	truckEnd: "ai-robberies:client:truckEnd"
-}, INSIDE_META = "robbery_house", KINDS = [
-	"register",
-	"safe",
-	"locker",
-	"vitrine",
-	"door",
-	"entry",
-	"loot"
-], point = (v) => {
+// resource/common/point.ts
+const point = (v) => {
 	let p = record(v);
 	return {
 		x: num(p.x, 0),
@@ -1634,6 +1631,20 @@ const EVENTS = {
 	let p = vec4(v, ZERO4);
 	return p.x === 0 && p.y === 0 ? null : p;
 };
+// resource/common/places.ts
+function readPlace(id, v) {
+	return {
+		id,
+		label: str(v.label, id, 48),
+		coords: point(v.coords),
+		minPolice: int(v.minPolice, 0, 0, 32),
+		cooldown: int(v.cooldown, 30, 1, 1440),
+		alertChance: int(v.alertChance, 100, 0, 100),
+		blip: bool(v.blip, !1),
+		interior: optional4(v.interior)
+	};
+}
+// resource/common/settings.ts
 function readSettings(raw) {
 	let v = record(raw), jobs = Array.isArray(v.policeJobs) ? v.policeJobs.filter((j) => typeof j == "string") : [], t = record(v.truck), cashMin = int(t.cashMin, 2e3, 0), blip = record(v.blip);
 	return {
@@ -1664,19 +1675,16 @@ function readSettings(raw) {
 		}
 	};
 }
-function readPlace(id, v) {
-	return {
-		id,
-		label: str(v.label, id, 48),
-		coords: point(v.coords),
-		minPolice: int(v.minPolice, 0, 0, 32),
-		cooldown: int(v.cooldown, 30, 1, 1440),
-		alertChance: int(v.alertChance, 100, 0, 100),
-		blip: bool(v.blip, !1),
-		interior: optional4(v.interior)
-	};
-}
-const MINIGAMES = [
+// resource/common/targets.ts
+const KINDS = [
+	"register",
+	"safe",
+	"locker",
+	"vitrine",
+	"door",
+	"entry",
+	"loot"
+], MINIGAMES = [
 	"auto",
 	"none",
 	"skillCheck",
@@ -2557,7 +2565,17 @@ const ANIMS = {
 	},
 	places: panel.records("places", readPlace),
 	targets: panel.records("targets", readTarget)
-}, policeOnDuty = () => online.countOnDuty(content.settings.policeJobs), houses = new class {
+}, policeOnDuty = () => online.countOnDuty(content.settings.policeJobs), EVENTS = {
+	start: "ai-robberies:start",
+	exit: "ai-robberies:exit",
+	inside: "ai-robberies:client:inside",
+	truckStart: "ai-robberies:truckStart",
+	truckJob: "ai-robberies:client:truckJob",
+	truckPlant: "ai-robberies:truckPlant",
+	truckOpen: "ai-robberies:client:truckOpen",
+	truckLoot: "ai-robberies:truckLoot",
+	truckEnd: "ai-robberies:client:truckEnd"
+}, INSIDE_META = "robbery_house", houses = new class {
 	inside = new Map();
 	worlds = new Map();
 	insideOf(source) {
@@ -2610,7 +2628,10 @@ onClientCallback(EVENTS.exit, (source) => {
 	loaded: (source) => houses.rejoin(source),
 	unloaded: (source) => houses.forget(source)
 }), onStop(() => houses.stop());
-// resource/server/truck.ts
+// resource/common/locale.ts
+const Locale = createLocale();
+GetCurrentResourceName(), IsDuplicityVersion();
+// resource/server/truck/anims.ts
 const STEP_ANIMS = {
 	plant: {
 		dict: "anim@heists@ornate_bank@thermal_charge",
@@ -2621,6 +2642,37 @@ const STEP_ANIMS = {
 		clip: "grab"
 	}
 };
+// resource/server/truck/guards.ts
+var Guards = class {
+	guards = [];
+	strays = [];
+	attacking = new Set();
+	async spawn(at, model, weapon) {
+		let h = at.heading * Math.PI / 180;
+		for (let side of [-1, 1]) {
+			let guard = CreatePed(4, GetHashKey(model), at.x + Math.cos(h) * 2.2 * side, at.y + Math.sin(h) * 2.2 * side, at.z, at.heading, !0, !0);
+			await waitFor(() => DoesEntityExist(guard) || void 0, 5e3).catch(() => !1) ? (SetEntityOrphanMode(guard, 2), GiveWeaponToPed(guard, GetHashKey(weapon), 250, !1, !0), SetPedArmour(guard, 100), this.guards.push(guard)) : this.strays.push(guard);
+		}
+	}
+	attackNear(vehicle) {
+		this.dropStrays();
+		for (let source of playersNearEntity(vehicle, 40)) for (let guard of this.guards) this.attacking.has(guard) || !DoesEntityExist(guard) || GetEntityHealth(guard) <= 100 || (TaskCombatPed(guard, GetPlayerPed(String(source)), 0, 16), this.attacking.add(guard));
+	}
+	dropStrays() {
+		if (this.strays.length !== 0) {
+			for (let ped of this.strays) DoesEntityExist(ped) && DeleteEntity(ped);
+			this.strays = this.strays.filter((ped) => !DoesEntityExist(ped));
+		}
+	}
+	allDown() {
+		return this.guards.every((g) => !DoesEntityExist(g) || GetEntityHealth(g) <= 100);
+	}
+	clear() {
+		for (let entity of [...this.guards, ...this.strays]) entity && DoesEntityExist(entity) && DeleteEntity(entity);
+		this.guards = [], this.strays = [], this.attacking.clear();
+	}
+};
+// resource/server/truck/truck.ts
 function rearOf(vehicle) {
 	let [x = 0, y = 0, z = 0] = GetEntityCoords(vehicle), h = GetEntityHeading(vehicle) * Math.PI / 180;
 	return {
@@ -2631,9 +2683,7 @@ function rearOf(vehicle) {
 }
 const truck = new class {
 	vehicle = 0;
-	guards = [];
-	strays = [];
-	attacking = new Set();
+	guards = new Guards();
 	known = new Set();
 	open = !1;
 	planted = !1;
@@ -2669,14 +2719,7 @@ const truck = new class {
 			coords: at,
 			locked: !0
 		});
-		if (vehicle === null) return !1;
-		this.vehicle = vehicle, this.open = !1, this.planted = !1, this.looted = !1;
-		let h = at.heading * Math.PI / 180;
-		for (let side of [-1, 1]) {
-			let guard = CreatePed(4, GetHashKey(s.guardModel), at.x + Math.cos(h) * 2.2 * side, at.y + Math.sin(h) * 2.2 * side, at.z, at.heading, !0, !0);
-			await waitFor(() => DoesEntityExist(guard) || void 0, 5e3).catch(() => !1) ? (SetEntityOrphanMode(guard, 2), GiveWeaponToPed(guard, GetHashKey(s.guardWeapon), 250, !1, !0), SetPedArmour(guard, 100), this.guards.push(guard)) : this.strays.push(guard);
-		}
-		return this.watcher.set(!0), this.ender = setTimeout(() => this.end(), s.lifetime * 6e4), this.tell(source, !0), !0;
+		return vehicle !== null && (this.vehicle = vehicle, this.open = !1, this.planted = !1, this.looted = !1, await this.guards.spawn(at, s.guardModel, s.guardWeapon), this.watcher.set(!0), this.ender = setTimeout(() => this.end(), s.lifetime * 6e4), this.tell(source, !0), !0);
 	}
 	tell(source, job) {
 		if (this.known.has(source) && !job) return;
@@ -2686,17 +2729,10 @@ const truck = new class {
 	}
 	guard() {
 		if (!this.active) return this.end();
-		this.dropStrays();
-		for (let source of playersNearEntity(this.vehicle, 40)) for (let guard of this.guards) this.attacking.has(guard) || !DoesEntityExist(guard) || GetEntityHealth(guard) <= 100 || (TaskCombatPed(guard, GetPlayerPed(String(source)), 0, 16), this.attacking.add(guard));
-	}
-	dropStrays() {
-		if (this.strays.length !== 0) {
-			for (let ped of this.strays) DoesEntityExist(ped) && DeleteEntity(ped);
-			this.strays = this.strays.filter((ped) => !DoesEntityExist(ped));
-		}
+		this.guards.attackNear(this.vehicle);
 	}
 	guardsDown() {
-		return this.guards.every((g) => !DoesEntityExist(g) || GetEntityHealth(g) <= 100);
+		return this.guards.allDown();
 	}
 	atRear(source) {
 		return this.active && isNear(source, rearOf(this.vehicle), 3);
@@ -2733,14 +2769,9 @@ const truck = new class {
 		this.looted = !0, this.ender && clearTimeout(this.ender), this.ender = setTimeout(() => this.end(), 6e4);
 	}
 	end() {
-		this.watcher.set(!1), this.ender && clearTimeout(this.ender), this.ender = null;
-		for (let entity of [
-			this.vehicle,
-			...this.guards,
-			...this.strays
-		]) entity && DoesEntityExist(entity) && DeleteEntity(entity);
+		this.watcher.set(!1), this.ender && clearTimeout(this.ender), this.ender = null, this.vehicle && DoesEntityExist(this.vehicle) && DeleteEntity(this.vehicle), this.guards.clear();
 		for (let source of this.known) emitNet(EVENTS.truckEnd, source);
-		this.vehicle = 0, this.planted = !1, this.guards = [], this.strays = [], this.attacking.clear(), this.known.clear();
+		this.vehicle = 0, this.planted = !1, this.known.clear();
 	}
 }();
 onClientCallback(EVENTS.truckStart, async (source) => {
@@ -2778,11 +2809,6 @@ async function loot(source) {
 	});
 }
 onStop(() => truck.end());
-// resource/server/index.ts
-const robbed = new GlobalGroup("rob:", stateBoolean);
-aiLogChannels({ robberies: {} });
-const UNARMED = GetHashKey("WEAPON_UNARMED");
-for (let id of content.targets.keys()) robbed.get(id) === !0 && robbed.set(id, !1);
 const robberies = new class {
 	runs = new PlayerMap();
 	busy = new Map();
@@ -2816,25 +2842,8 @@ const robberies = new class {
 	shouldAlert(placeId, minutes) {
 		return this.alerted.take(placeId, minutes * 6e4);
 	}
-}();
-onClientCallback(EVENTS.start, {
-	args: oneArg((v) => readText(v, 64)),
-	lock: !0
-}, (source, id) => {
-	let target = content.targets.get(id), place = target ? content.places.get(target.place) : void 0;
-	return !target || !place || !isNear(source, target.coords, 2.5) || place.interior && target.kind !== "entry" && houses.insideOf(source) !== place.id ? fail("ROB_ERR_FAR") : target.kind === "entry" && robbed.get(id) === !0 ? (houses.enter(source, place), {
-		ok: !0,
-		entered: !0
-	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && rollChance(place.alertChance) && dispatch.alert({
-		code: "10-90",
-		title: Locale("ROB_ALERT"),
-		message: place.label,
-		coords: place.coords,
-		source,
-		icon: "sack-dollar",
-		priority: "high"
-	}), rob(source, target), { ok: !0 });
-});
+}(), robbed = new GlobalGroup("rob:", stateBoolean);
+// resource/server/robberies/rob.ts
 async function rob(source, target) {
 	if (!await robberies.run(source, target)) return;
 	let place = content.places.get(target.place);
@@ -2858,3 +2867,25 @@ async function rob(source, target) {
 		}
 	});
 }
+// resource/server/robberies/index.ts
+aiLogChannels({ robberies: {} });
+const UNARMED = GetHashKey("WEAPON_UNARMED");
+for (let id of content.targets.keys()) robbed.get(id) === !0 && robbed.set(id, !1);
+onClientCallback(EVENTS.start, {
+	args: oneArg((v) => readText(v, 64)),
+	lock: !0
+}, (source, id) => {
+	let target = content.targets.get(id), place = target ? content.places.get(target.place) : void 0;
+	return !target || !place || !isNear(source, target.coords, 2.5) || place.interior && target.kind !== "entry" && houses.insideOf(source) !== place.id ? fail("ROB_ERR_FAR") : target.kind === "entry" && robbed.get(id) === !0 ? (houses.enter(source, place), {
+		ok: !0,
+		entered: !0
+	}) : robbed.get(id) === !0 ? fail("ROB_ERR_EMPTY") : robberies.taken(target, source) ? fail("ROB_ERR_BUSY") : policeOnDuty() < place.minPolice ? fail("ROB_ERR_POLICE") : target.item && !inventory.hasItem(source, target.item) ? fail("ROB_ERR_ITEM") : target.kind === "vitrine" && GetSelectedPedWeapon(GetPlayerPed(String(source))) === UNARMED ? fail("ROB_ERR_WEAPON") : (place.alertChance > 0 && robberies.shouldAlert(place.id, place.cooldown) && rollChance(place.alertChance) && dispatch.alert({
+		code: "10-90",
+		title: Locale("ROB_ALERT"),
+		message: place.label,
+		coords: place.coords,
+		source,
+		icon: "sack-dollar",
+		priority: "high"
+	}), rob(source, target), { ok: !0 });
+});

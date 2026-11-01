@@ -1,5 +1,7 @@
 import { AdminPanel, online, resourceExport } from "@aicore-fivem/lib/server";
-import { readPlace, readSettings, readTarget } from "common/robbery";
+import { readPlace } from "common/places";
+import { readSettings } from "common/settings";
+import { readTarget } from "common/targets";
 import { robberiesSchema } from "./schema";
 
 export const core = resourceExport("ai-core");
