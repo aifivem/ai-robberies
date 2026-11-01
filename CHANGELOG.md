@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/aifivem/ai-robberies/compare/v0.2.1...v0.2.2) (2026-11-01)
+
+
+### Code Refactoring
+
+* feature folders, side entries that only import, panel schema per tab ([50b1ce9](https://github.com/aifivem/ai-robberies/commit/50b1ce907b145491c69202ee290088820a38e9cf))
+
 ## [0.2.1](https://github.com/aifivem/ai-robberies/compare/v0.2.0...v0.2.1) (2026-10-31)
 
 
