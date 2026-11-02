@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.4](https://github.com/aifivem/ai-robberies/compare/v0.2.3...v0.2.4) (2026-11-02)
+
+
+### Documentation
+
+* install from the release zip ([af355e9](https://github.com/aifivem/ai-robberies/commit/af355e907875cb4797fed01b87ad24882229b1c7))
+
+
+### Miscellaneous Chores
+
+* build files are no longer in git, the release zip carries them ([3773132](https://github.com/aifivem/ai-robberies/commit/3773132908ed607a438cf946c518daa4f5c0ca00))
+
 ## [0.2.3](https://github.com/aifivem/ai-robberies/compare/v0.2.2...v0.2.3) (2026-11-02)
 
 
