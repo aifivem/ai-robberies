@@ -4,8 +4,8 @@ import {
   notify,
   onServerEvent,
   Points,
-} from "@aicore-fivem/lib/client";
-import { oneArg, readFinite, readId } from "@aicore-fivem/lib/shared";
+} from "@aifivem/lib/client";
+import { oneArg, readFinite, readId } from "@aifivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS } from "common/robbery";
 import { content, FALLBACK, world } from "./content";

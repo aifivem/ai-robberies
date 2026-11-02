@@ -1,4 +1,4 @@
-import type { CardSpec } from "@aicore-fivem/shared";
+import type { CardSpec } from "@aifivem/shared";
 
 export const doorCard: CardSpec = {
   icon: "lock",

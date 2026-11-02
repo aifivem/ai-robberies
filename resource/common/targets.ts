@@ -1,4 +1,4 @@
-import { bool, int, num, str } from "@aicore-fivem/lib/shared";
+import { bool, int, num, str } from "@aifivem/lib/shared";
 import { point, type Point } from "./point";
 
 /**

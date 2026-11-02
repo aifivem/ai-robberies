@@ -1,4 +1,4 @@
-import { GlobalGroup, stateBoolean } from "@aicore-fivem/lib/client";
+import { GlobalGroup, stateBoolean } from "@aifivem/lib/client";
 import { ROBBED_PREFIX } from "common/robbery";
 
 /** Which targets are emptied (GlobalState `rob:<id>`), read from memory. */

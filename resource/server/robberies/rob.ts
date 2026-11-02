@@ -4,8 +4,8 @@ import {
   inventory,
   isNear,
   notify,
-} from "@aicore-fivem/lib/server";
-import { randomInt } from "@aicore-fivem/lib/shared";
+} from "@aifivem/lib/server";
+import { randomInt } from "@aifivem/lib/shared";
 import { Locale } from "common";
 import type { Target } from "common/targets";
 import { content, core } from "../content";

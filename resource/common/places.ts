@@ -1,4 +1,4 @@
-import { bool, int, str, type Vec4 } from "@aicore-fivem/lib/shared";
+import { bool, int, str, type Vec4 } from "@aifivem/lib/shared";
 import { optional4, point, type Point } from "./point";
 
 export interface Place {

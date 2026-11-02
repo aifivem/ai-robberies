@@ -7,8 +7,8 @@ import {
   notify,
   onClientCallback,
   onStop,
-} from "@aicore-fivem/lib/server";
-import { fail, randomInt } from "@aicore-fivem/lib/shared";
+} from "@aifivem/lib/server";
+import { fail, randomInt } from "@aifivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS } from "common/robbery";
 import { content, core, policeOnDuty } from "../content";

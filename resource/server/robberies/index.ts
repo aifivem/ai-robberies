@@ -4,8 +4,8 @@ import {
   inventory,
   isNear,
   onClientCallback,
-} from "@aicore-fivem/lib/server";
-import { fail, oneArg, readText, rollChance } from "@aicore-fivem/lib/shared";
+} from "@aifivem/lib/server";
+import { fail, oneArg, readText, rollChance } from "@aifivem/lib/shared";
 import { Locale } from "common";
 import { EVENTS } from "common/robbery";
 import { content, policeOnDuty } from "../content";

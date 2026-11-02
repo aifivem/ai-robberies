@@ -5,7 +5,7 @@ import {
   notify,
   PlayerMap,
   progressFor,
-} from "@aicore-fivem/lib/server";
+} from "@aifivem/lib/server";
 import { Locale } from "common";
 import { ANIMS, AUTO_MINIGAME, type Target } from "common/targets";
 

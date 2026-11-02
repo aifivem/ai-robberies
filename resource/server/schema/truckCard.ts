@@ -1,4 +1,4 @@
-import type { CardSpec } from "@aicore-fivem/shared";
+import type { CardSpec } from "@aifivem/shared";
 
 /** The armored truck job's settings (`settings.truck`). */
 export const truckCard: CardSpec = {
