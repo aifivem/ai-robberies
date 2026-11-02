@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/aifivem/ai-robberies/compare/v0.2.2...v0.2.3) (2026-11-02)
+
+
+### Code Refactoring
+
+* import the shared packages from [@aifivem](https://github.com/aifivem) ([ebb1023](https://github.com/aifivem/ai-robberies/commit/ebb1023147c85f64b7320f38db72eee0e82e5c32))
+
 ## [0.2.2](https://github.com/aifivem/ai-robberies/compare/v0.2.1...v0.2.2) (2026-11-01)
 
 
